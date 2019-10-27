@@ -34,12 +34,9 @@ then
   fi
 fi
 
-REPO=${REPO:-marcone}
-BRANCH=${BRANCH:-main-dev}
-
 ARCHIVE_SYSTEM=${ARCHIVE_SYSTEM:-none}
 
-log_progress "$0 starting with REPO=$REPO, BRANCH=$BRANCH, ARCHIVE_SYSTEM=$ARCHIVE_SYSTEM"
+log_progress "$0 starting with ARCHIVE_SYSTEM=$ARCHIVE_SYSTEM"
 
 function check_variable () {
     local var_name="$1"
@@ -51,14 +48,17 @@ function check_variable () {
 }
 
 function get_script () {
+    if [ ! -d /root/teslausb ]
+    then
+      log_progress "REPO not found in /root/teslausb"
+      exit 1
+    fi
     local local_path="$1"
     local name="$2"
     local remote_path="${3:-}"
 
-    log_progress "Starting download for $local_path/$name"
-    curl -o "$local_path/$name" https://raw.githubusercontent.com/"$REPO"/teslausb/"$BRANCH"/"$remote_path"/"$name"
-    chmod +x "$local_path/$name"
-    log_progress "Done"
+    ln -sf "/root/teslausb/$remote_path/$name" "$local_path/$name"
+    chmod +x "/root/teslausb/$remote_path/$name"
 }
 
 function install_rc_local () {

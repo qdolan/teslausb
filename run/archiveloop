@@ -442,9 +442,9 @@ function set_time () {
     log "Failed to stop ntp daemon"
   fi
   if ! timeout 20 ntpd -q -x -g
-  then
+    then
     log "Failed to set time"
-  fi
+    fi
   if ! systemctl start ntp
   then
     log "Failed to start ntp daemon"

@@ -167,14 +167,34 @@ function curlwrapper () {
   done
 }
 
+function clone_repo () {
+  if ! hash git 2>/dev/null
+  then
+    apt-get -y --force-yes install git
+  fi
+  if [ ! -d /root/teslausb ]
+  then
+    setup_progress "Cloning git repo: https://github.com/${REPO}/teslausb.git ..."
+    git clone "https://github.com/${REPO}/teslausb.git" /root/teslausb
+    pushd /root/teslausb
+    git checkout "${BRANCH}"
+    popd
+  fi
+}
+
 function get_script () {
+  if [ ! -d /root/teslausb ]
+  then
+    setup_progress "REPO not found in /root/teslausb"
+    exit 1
+  fi
   local local_path="$1"
   local name="$2"
   local remote_path="${3:-}"
 
-  curlwrapper -o "$local_path/$name" https://raw.githubusercontent.com/"$REPO"/teslausb/"$BRANCH"/"$remote_path"/"$name"
-  chmod +x "$local_path/$name"
-  setup_progress "Downloaded $local_path/$name ..."
+  setup_progress "Linking script $local_path/$name"
+  ln -sf "/root/teslausb/$remote_path/$name" "$local_path/$name"
+  chmod +x "/root/teslausb/$remote_path/$name"
 }
 
 function get_ancillary_setup_scripts () {
@@ -300,16 +320,16 @@ function set_timezone () {
 }
 
 function cmd_selfupdate {
-  get_script /tmp setup-teslausb setup/pi &> /dev/null
-  if cmp -s /tmp/setup-teslausb /root/bin/setup-teslausb
+  clone_repo
+  pushd /root/teslausb
+  if git pull | grep -q "Already up to date."
   then
     setup_progress "$0 already up to date"
   else
-    /root/bin/remountfs_rw > /dev/null
-    mv /tmp/setup-teslausb /root/bin/setup-teslausb
     setup_progress "$0 updated"
   fi
-  setup_progress "other scripts may need to be updated by running $0"
+  popd
+  chmod +x /root/bin/*
   exit 0
 }
 
@@ -493,19 +513,18 @@ fi
 
 configure_hostname
 
-HEAD_VERSION=$(curlwrapper -s "https://api.github.com/repos/$REPO/teslausb/git/refs/heads/$BRANCH" | grep '"sha":' | awk '{print $2}' | sed 's/"\|,//g')
-BRANCHNAME="$BRANCH"
-BRANCH="$HEAD_VERSION"
+update_package_index
 
-get_script /tmp setup-teslausb setup/pi &> /dev/null
-if cmp -s /tmp/setup-teslausb /root/bin/setup-teslausb
+clone_repo
+pushd /root/teslausb
+git remote update 2>&2 >/dev/null
+if [ "$(git status --branch --porcelain | wc -l)" -eq 0 ]
 then
   setup_progress "$0 is up to date"
 else
-  setup_progress "WARNING: $BRANCHNAME contains a different version of $0. It is recommended to run '$0 selfupdate' to update to that version"
+  setup_progress "WARNING: remote repo contains updates. It is recommended to run '$0 selfupdate' to update to the latest version"
 fi
-
-update_package_index
+popd
 
 # If USE_LED_FOR_SETUP_PROGRESS = true.
 setup_led_off
