@@ -82,17 +82,17 @@ function make_links_for_snapshot {
 }
 
 function snapshot {
-  # Only take a snapshot if the remaining free space is greater than
-  # the size of the cam disk image. Delete older snapshots if necessary
-  # to achieve that.
+  # Only take a snapshot when the remaining free space is greater than
+  # 512MB (reflinked snapshots don't use much space).
+  # Delete older snapshots if necessary to achieve that.
   # todo: this could be put in a background task and with a lower free
   # space requirement, to delete old snapshots just before running out
   # of space and thus make better use of space
   local imgsize=$(eval $(stat --format='echo $((%b*%B))' "${STORAGE_MOUNT}"/cam_disk.bin))
   while true
   do
-    local freespace=$(eval $(stat --file-system --format='echo $((%f*%S))' /backingfiles/cam_disk.bin))
-    if [ $freespace -gt $imgsize ]
+    local freespace=$(eval $(stat --file-system --format='echo $((%f*%S))' "${STORAGE_MOUNT}"/cam_disk.bin))
+    if [ $(( freespace > (512 * 1024 * 1024) )) ]
     then
       break
     fi
