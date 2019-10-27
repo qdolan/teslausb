@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#! /bin/bash -eu
 
 if [ "$BASH_SOURCE" != "$0" ]
 then
@@ -26,6 +26,8 @@ fi
 
 export LOG_FILE=/mutable/archiveloop.log
 
+export STORAGE_MOUNT=/backingfiles
+export ARCHIVE_MOUNT=/mnt/archive
 export CAM_MOUNT=/mnt/cam
 export MUSIC_MOUNT=/mnt/music
 export ARCHIVE_MOUNT=/mnt/archive
@@ -276,8 +278,8 @@ function archive_teslacam_clips () {
 
     fix_errors_in_cam_file
   
-    DIR_COUNT=$(cd "$CAM_MOUNT"/TeslaCam && find . -maxdepth 2 -path './SavedClips/*' -o -path './SentryClips/*' -type d | wc -l)
-    FILE_COUNT=$(cd "$CAM_MOUNT"/TeslaCam && find . -maxdepth 3 -path './SavedClips/*' -o -path './SentryClips/*' -type f | wc -l)
+    DIR_COUNT=$(cd $STORAGE_MOUNT/TeslaCam && find -L . -maxdepth 2 -path './SavedClips/*' -o -path './SentryClips/*' -type d | wc -l)
+    FILE_COUNT=$(cd $STORAGE_MOUNT/TeslaCam && find -L . -maxdepth 3 -path './SavedClips/*' -o -path './SentryClips/*' -type f | wc -l)
   
     log "There are $DIR_COUNT event folder(s) with $FILE_COUNT file(s) to move."
   
@@ -439,13 +441,13 @@ function set_time () {
 }
 
 function mount_all_snapshots {
-  if ! stat /backingfiles/snapshots/snap-*/snap.bin &> /dev/null
+  if ! stat "${STORAGE_MOUNT}"/snapshots/snap-*/snap.bin &> /dev/null
   then
     log "no snapshots"
     return
   fi
 
-  for img in /backingfiles/snapshots/snap-*/snap.bin
+  for img in "${STORAGE_MOUNT}"/snapshots/snap-*/snap.bin
   do
     log "mounting snapshot $img"
     imgdir=$(dirname "$img")

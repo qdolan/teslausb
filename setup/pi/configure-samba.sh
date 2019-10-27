@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 
 function log_progress () {
   if typeset -f setup_progress > /dev/null; then
@@ -8,6 +8,7 @@ function log_progress () {
 }
 
 SAMBA_GUEST=${SAMBA_GUEST:-false}
+STORAGE_MOUNT=${STORAGE_MOUNT:-/backingfiles}
 
 if [ "$SAMBA_GUEST" = "true" ]
 then
@@ -90,7 +91,7 @@ cat <<- EOF > /etc/samba/smb.conf
 	[TeslaCam]
 	   read only = yes
 	   locking = no
-	   path = /backingfiles/TeslaCam
+	   path = ${STORAGE_MOUNT}/TeslaCam
 	   guest ok = $GUEST_OK
 	   create mask = 0775
 	   veto files = /._*/.DS_Store/

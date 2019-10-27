@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#! /bin/bash -eu
 
 function setup_progress () {
   local setup_logfile=/boot/teslausb-headless-setup.log
@@ -11,7 +11,7 @@ function setup_progress () {
 }
 
 # install XFS tools if needed
-if ! hash mkfs.xfs
+if ! hash mkfs.xfs 2>/dev/null
 then
   apt-get -y --force-yes install xfsprogs
 fi
@@ -39,13 +39,13 @@ then
     mkfs.xfs -f -m reflink=1 -L backingfiles /dev/sda2
   fi
     
-  BACKINGFILES_MOUNTPOINT="$1"
+  STORAGE_MOUNTPOINT="$1"
   MUTABLE_MOUNTPOINT="$2"
   if grep -q backingfiles /etc/fstab
   then
     setup_progress "backingfiles already defined in /etc/fstab. Not modifying /etc/fstab."
   else
-    echo "LABEL=backingfiles $BACKINGFILES_MOUNTPOINT xfs auto,rw,noatime 0 2" >> /etc/fstab
+    echo "LABEL=backingfiles $STORAGE_MOUNTPOINT xfs auto,rw,noatime 0 2" >> /etc/fstab
   fi
   if grep -q 'mutable' /etc/fstab
   then
@@ -85,19 +85,19 @@ then
         exit 1
       fi
     fi
-    if mount | grep -qw "/backingfiles"
+    if mount | grep -qw "$STORAGE_MOUNTPOINT"
     then
-      if ! umount /backingfiles
+      if ! umount "$STORAGE_MOUNTPOINT"
       then
-        setup_progress "STOP: couldn't unmount /backingfiles"
+        setup_progress "STOP: couldn't unmount $STORAGE_MOUNTPOINT"
         exit 1
       fi
     fi
     mkfs.xfs -f -m reflink=1 -L backingfiles /dev/mmcblk0p3
 
     # update /etc/fstab
-    sed -i 's/LABEL=backingfiles .*/LABEL=backingfiles \/backingfiles xfs auto,rw,noatime 0 2/' /etc/fstab
-    mount /backingfiles
+    sed -i "s@LABEL=backingfiles .*@LABEL=backingfiles $STORAGE_MOUNTPOINT xfs auto,rw,noatime 0 2@" /etc/fstab
+    mount "$STORAGE_MOUNTPOINT"
     setup_progress "backingfiles converted to xfs and mounted"
     return &> /dev/null || exit 0
   fi
@@ -111,7 +111,7 @@ then
   exit 1
 fi
 
-BACKINGFILES_MOUNTPOINT="$1"
+STORAGE_MOUNTPOINT="$1"
 MUTABLE_MOUNTPOINT="$2"
 
 setup_progress "Checking existing partitions..."
@@ -155,5 +155,5 @@ setup_progress "Formatting new partitions..."
 mkfs.xfs -f -m reflink=1 -L backingfiles /dev/mmcblk0p3
 mkfs.ext4 -F -L mutable /dev/mmcblk0p4
 
-echo "LABEL=backingfiles $BACKINGFILES_MOUNTPOINT xfs auto,rw,noatime 0 2" >> /etc/fstab
+echo "LABEL=backingfiles $STORAGE_MOUNTPOINT xfs auto,rw,noatime 0 2" >> /etc/fstab
 echo "LABEL=mutable $MUTABLE_MOUNTPOINT ext4 auto,rw 0 2" >> /etc/fstab

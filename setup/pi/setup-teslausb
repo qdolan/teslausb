@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#! /bin/bash -eu
 
 if [ "$BASH_SOURCE" != "$0" ]
 then
@@ -42,8 +42,8 @@ then
   fi
 fi
 
-REPO=${REPO:-marcone}
-BRANCH=${BRANCH:-main-dev}
+export REPO=${REPO:-marcone}
+export BRANCH=${BRANCH:-main-dev}
 USE_LED_FOR_SETUP_PROGRESS=true
 CONFIGURE_ARCHIVING=${CONFIGURE_ARCHIVING:-true}
 UPGRADE_PACKAGES=${UPGRADE_PACKAGES:-false}
@@ -84,7 +84,7 @@ then
     touch /root/TESLAUSB_ROOT_PARTITION_INCREASED
     ROOTSTART=$(partx --show -g -o START /dev/mmcblk0p2)
     ROOTSIZE=$(partx --show -g -o SECTORS /dev/mmcblk0p2)
-    ROOTSIZE=$(($ROOTSIZE+$INCREASE_ROOT_SIZE))
+    ROOTSIZE=$((ROOTSIZE+INCREASE_ROOT_SIZE))
     echo "$ROOTSTART,$ROOTSIZE" | sfdisk --force /dev/mmcblk0 -N 2
     setup_progress "increased root partition size, rebooting for changes to take effect"
     reboot
@@ -131,7 +131,7 @@ function headless_setup_mark_setup_success () {
 function headless_setup_progress_flash () {
   if [ $USE_LED_FOR_SETUP_PROGRESS = "true" ] && [ $HEADLESS_SETUP = "true" ]
   then
-    /etc/stage_flash $1
+    /etc/stage_flash $1 || USE_LED_FOR_SETUP_PROGRESS=false
   fi
 }
 
@@ -202,13 +202,13 @@ function fix_cmdline_txt_modules_load ()
   setup_progress "Fixed cmdline.txt."
 }
 
-BACKINGFILES_MOUNTPOINT=/backingfiles
+STORAGE_MOUNTPOINT=/backingfiles
 MUTABLE_MOUNTPOINT=/mutable
 
 function create_usb_drive_backing_files () {
-  if [ ! -e "$BACKINGFILES_MOUNTPOINT" ]
+  if [ ! -e "$STORAGE_MOUNTPOINT" ]
   then
-    mkdir "$BACKINGFILES_MOUNTPOINT"
+    mkdir "$STORAGE_MOUNTPOINT"
   fi
 
   if [ ! -e "$MUTABLE_MOUNTPOINT" ]
@@ -216,19 +216,19 @@ function create_usb_drive_backing_files () {
     mkdir "$MUTABLE_MOUNTPOINT"
   fi
 
-  /tmp/create-backingfiles-partition.sh "$BACKINGFILES_MOUNTPOINT" "$MUTABLE_MOUNTPOINT"
+  /tmp/create-backingfiles-partition.sh "$STORAGE_MOUNTPOINT" "$MUTABLE_MOUNTPOINT"
 
-  if ! findmnt --mountpoint $BACKINGFILES_MOUNTPOINT
+  if ! findmnt --mountpoint $STORAGE_MOUNTPOINT
   then
     setup_progress "Mounting the partition for the backing files..."
-    mount $BACKINGFILES_MOUNTPOINT
+    mount $STORAGE_MOUNTPOINT
     setup_progress "Mounted the partition for the backing files."
   fi
 
-  if [ ! -e $BACKINGFILES_MOUNTPOINT/cam_disk.bin ]
+  if [ ! -e $STORAGE_MOUNTPOINT/cam_disk.bin ]
   then
     setup_progress "Creating backing disk files."
-    /tmp/create-backingfiles.sh "$camsize" "$musicsize" "$BACKINGFILES_MOUNTPOINT"
+    /tmp/create-backingfiles.sh "$camsize" "$musicsize" "$STORAGE_MOUNTPOINT"
   fi
 }
 
@@ -275,7 +275,7 @@ function upgrade_packages () {
 }
 
 function set_timezone () {
-  if [ ! -z ${timezone:+x} ]
+  if [ -n "${timezone:+x}" ]
   then
     if [ -f "/usr/share/zoneinfo/$timezone" ]
     then
@@ -345,20 +345,20 @@ function cmd_diagnose {
     then
       echo "backingfiles partition does not exist"
     fi
-    if [ ! -d /backingfiles ]
+    if [ ! -d "$STORAGE_MOUNTPOINT" ]
     then
       echo "backingfiles directory does not exist"
     fi
-    if ! grep -q '/backingfiles' /etc/fstab
+    if ! grep -q "$STORAGE_MOUNTPOINT" /etc/fstab
     then
       echo "backingfiles not in fstab"
     fi
 
-    if [ ! -f /backingfiles/cam_disk.bin ]
+    if [ ! -f "$STORAGE_MOUNTPOINT"/cam_disk.bin ]
     then
       echo "cam disk image does not exist"
     fi
-    if ! grep -q '/backingfiles/cam_disk.bin' /etc/fstab
+    if ! grep -q "$STORAGE_MOUNTPOINT"/cam_disk.bin /etc/fstab
     then
       echo "cam disk image not in fstab"
     fi
@@ -565,7 +565,7 @@ then
   fi
 fi
 
-if [ ! -z ${AP_SSID:+x} ]
+if [ -n "${AP_SSID:+x}" ]
 then
   get_script /tmp configure-ap.sh setup/pi
   /tmp/configure-ap.sh
@@ -584,3 +584,5 @@ if [ -t 0 ]
 then
   setup_progress '(reboot now for changes to take effect)'
 fi
+
+sync

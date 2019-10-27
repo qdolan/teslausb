@@ -20,7 +20,7 @@ then
   losetup -P -f $SNAP
 fi
 PARTLOOP=$(losetup -j $SNAP | awk '{print $1}' | sed 's/:/p1/')
-#fsck $PARTLOOP -- -a || true
+fsck -p $PARTLOOP || true
 
 echo mount $PARTLOOP $MNT
 mount -o ro $PARTLOOP $MNT
