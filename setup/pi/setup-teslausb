@@ -170,7 +170,7 @@ function curlwrapper () {
 function clone_repo () {
   if ! hash git 2>/dev/null
   then
-    apt-get -y --force-yes install git
+    apt-get -y --assume-yes install git
   fi
   if [ ! -d /root/teslausb ]
   then
@@ -333,7 +333,7 @@ function set_timezone () {
     then
       if curlwrapper -o /root/bin/tzupdate.py https://raw.githubusercontent.com/marcone/tzupdate/develop/tzupdate.py
       then
-        apt-get -y --force-yes install python-requests
+        apt-get -y --assume-yes install python-requests
         chmod +x /root/bin/tzupdate.py
         if ! tzout=$(/root/bin/tzupdate.py 2>&1)
         then
@@ -352,10 +352,10 @@ function cmd_selfupdate {
   clone_repo
   pushd /root/teslausb
   if git pull | grep -q "Already up to date."
-  then
-    setup_progress "$0 already up to date"
-  else
-    setup_progress "$0 updated"
+    then
+      setup_progress "$0 already up to date"
+    else
+      setup_progress "$0 updated"
   fi
   popd
   chmod +x /root/bin/*

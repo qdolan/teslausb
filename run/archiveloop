@@ -544,7 +544,7 @@ do
 
 if [ "${SNAPSHOTS_ENABLED:-true}" = "true" ]
 then
-  # take a snapshot before archive_clips starts deleting files
+  # take a snapshot before archive_clips starts
   /root/bin/make_snapshot.sh
 fi
 

@@ -59,7 +59,7 @@ then
     echo "tmpfs /mnt/smbexport tmpfs nodev,nosuid 0 0" >> /etc/fstab
   fi
 
-  DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install samba
+  DEBIAN_FRONTEND=noninteractive apt-get -y --assume-yes install samba
   systemctl enable smbd
   systemctl start smbd
   echo -e "raspberry\nraspberry\n" | smbpasswd -s -a pi

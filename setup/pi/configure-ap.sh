@@ -29,7 +29,7 @@ IP=${AP_IP:-"192.168.66.1"}
 
 # install required packages
 log_progress "installing hostapd"
-apt-get -y --force-yes install hostapd
+apt-get -y --assume-yes install hostapd
 
 log_progress "configuring AP '$AP_SSID' with IP $IP"
 
@@ -92,13 +92,13 @@ EOF
 
 if [ ! -L /var/lib/misc ]
 then
-    if ! findmnt --mountpoint /mutable
-    then
-        mount /mutable
-    fi
-    mkdir -p /mutable/varlib
-    mv /var/lib/misc /mutable/varlib
-    ln -s /mutable/varlib/misc /var/lib/misc
+  if ! findmnt --mountpoint /mutable
+  then
+    mount /mutable
+  fi
+  mkdir -p /mutable/varlib
+  mv /var/lib/misc /mutable/varlib
+  ln -s /mutable/varlib/misc /var/lib/misc
 fi
 
 # update the host name to have the AP IP address, otherwise

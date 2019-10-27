@@ -13,7 +13,7 @@ function setup_progress () {
 # install XFS tools if needed
 if ! hash mkfs.xfs 2>/dev/null
 then
-  apt-get -y --force-yes install xfsprogs
+  apt-get -y --assume-yes install xfsprogs
 fi
 
 # Will check for USB Drive before running sd card
