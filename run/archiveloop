@@ -77,7 +77,7 @@ function fix_errors_in_mount_point () {
   log "Running fsck on $mount_point..."
   local backingfile=$(mount | grep -w "$mount_point" | awk '{print $1}')
   local loopback=$(losetup -l | grep -w  "$backingfile" | awk '{print $1}')
-  /sbin/fsck "$loopback" -- -a |& timestamp '| ' >> "$LOG_FILE" || echo ""
+  fsck -p "$loopback" |& timestamp '| ' >> "$LOG_FILE" || echo ""
   log "Finished fsck on $mount_point."
 }
 
@@ -262,8 +262,8 @@ function check_if_usb_gadget_is_mounted () {
 }
 
 function mount_and_fix_errors_in_cam_file () {
-  ensure_cam_file_is_mounted
   fix_errors_in_cam_file
+  ensure_cam_file_is_mounted
   trim_cam_file 
   unmount_cam_file
 }
@@ -292,14 +292,10 @@ function disconnect_usb_drives_from_host () {
 function archive_teslacam_clips () {
     log "Checking saved folder count..."
   
-    ensure_cam_file_is_mounted
-
-    fix_errors_in_cam_file
-  
     DIR_COUNT=$(cd $STORAGE_MOUNT/TeslaCam && find -L . -maxdepth 2 -path './SavedClips/*' -o -path './SentryClips/*' -type d | wc -l)
     FILE_COUNT=$(cd $STORAGE_MOUNT/TeslaCam && find -L . -maxdepth 3 -path './SavedClips/*' -o -path './SentryClips/*' -type f | wc -l)
   
-    log "There are $DIR_COUNT event folder(s) with $FILE_COUNT file(s) to move."
+    log "There are $DIR_COUNT event folder(s) with $FILE_COUNT file(s) to archive."
   
     if [ $DIR_COUNT -gt 0 ]
     then
@@ -331,13 +327,15 @@ function archive_teslacam_clips () {
 	    fi
 	fi
     fi
-
-    unmount_cam_file
 }
 
 function copy_music_files () {
   log "Starting music sync..."
 
+  # FIXME - instead of unmounting for duration of copy
+  #  make a snapshot or replacement of music disk
+  #  copy music to snapshot
+  #  swap in replacement music image
   ensure_music_file_is_mounted
 
   fix_errors_in_music_file
@@ -350,12 +348,9 @@ function copy_music_files () {
 function archive_clips () {
   log "Archiving..."
 
-  disconnect_usb_drives_from_host
-
   if ! /root/bin/connect-archive.sh
   then
     log "Couldn't connect archive, skipping archive step"
-    connect_usb_drives_to_host
     return
   fi
 
@@ -368,6 +363,7 @@ function archive_clips () {
 
   if timeout 5 [ -d "$MUSIC_ARCHIVE_MOUNT" -a -d "$MUSIC_MOUNT" ]
   then
+    disconnect_usb_drives_from_host
     log "Copying music..."
     if copy_music_files
     then
@@ -375,13 +371,10 @@ function archive_clips () {
     else
       log "Copying music failed."
     fi
+    connect_usb_drives_to_host
   else
     log "Music archive not configured or unreachable"
   fi
-
-  /root/bin/disconnect-archive.sh
-
-  connect_usb_drives_to_host
 }
 
 function truncate_log () {
