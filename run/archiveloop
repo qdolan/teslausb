@@ -64,6 +64,14 @@ function timestamp () {
   done
 }
 
+function trim_mount_point () {
+  local mount_point="$1"
+  log "Trimming $mount_point..."
+  fstrim "$mount_point"
+  sync
+  log "Finished trim on $mount_point."
+}
+
 function fix_errors_in_mount_point () {
   local mount_point="$1"
   log "Running fsck on $mount_point..."
@@ -175,6 +183,10 @@ function fix_errors_in_cam_file () {
   fix_errors_in_mount_point "$CAM_MOUNT"
 }
 
+function trim_cam_file () {
+  trim_mount_point "$CAM_MOUNT"
+}
+
 function ensure_cam_file_is_mounted () {
   log "Ensuring cam file is mounted..."
   ensure_mountpoint_is_mounted_with_retry "$CAM_MOUNT"
@@ -210,6 +222,10 @@ function unmount_cam_file () {
 
 function unmount_music_file () {
   unmount_mount_point "$MUSIC_MOUNT"
+}
+
+function trim_music_file () {
+  trim_mount_point "$MUSIC_MOUNT"
 }
 
 function fix_errors_in_music_file () {
@@ -248,6 +264,7 @@ function check_if_usb_gadget_is_mounted () {
 function mount_and_fix_errors_in_cam_file () {
   ensure_cam_file_is_mounted
   fix_errors_in_cam_file
+  trim_cam_file 
   unmount_cam_file
 }
 
@@ -256,6 +273,7 @@ function mount_and_fix_errors_in_music_file () {
   then
     ensure_music_file_is_mounted
     fix_errors_in_music_file
+    trim_music_file
     unmount_music_file
   fi
 }
@@ -479,6 +497,10 @@ export -f log
 
 echo "==============================================" >> "$LOG_FILE"
 log "Starting archiveloop..."
+
+
+fstrim -a
+sync
 
 mount_all_snapshots
 
