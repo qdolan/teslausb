@@ -74,15 +74,24 @@ function add_drive () {
   local label="$2"
   local size="$3"
   local filename="$4"
+  local fstype="${5:-vfat}"
+
+  local type=$([ "$fstype" = "vfat" ] && echo "c" || echo "83")
 
   log_progress "Allocating ${size}K for $filename..."
   fallocate -l "$size"K "$filename"
-  echo "type=c" | sfdisk "$filename" > /dev/null
+  echo "type=$type" | sfdisk "$filename" > /dev/null
   local partition_offset=$(first_partition_offset "$filename")
   losetup -o $partition_offset -f "$filename"
   loopdev=$(losetup -j "$filename" | awk '{print $1}' | sed 's/://')
-  log_progress "Creating filesystem with label '$label'"
-  mkfs.vfat $loopdev -F 32 -n "$label"
+  log_progress "Creating $fstype filesystem with label '$label'"
+
+  if [ "$fstype" = "vfat" ]
+  then
+    mkfs.vfat $loopdev -F 32 -n "$label"
+  else
+    mkfs.ext4 $loopdev -L "$label"
+  fi
   losetup -d $loopdev
 
   local mountpoint=/mnt/"$name"
@@ -92,7 +101,12 @@ function add_drive () {
     mkdir "$mountpoint"
   fi
   sed -i "\@^$filename .*@d" /etc/fstab
-  echo "$filename $mountpoint vfat utf8,noauto,users,umask=000,offset=$partition_offset 0 0" >> /etc/fstab
+  if [ "$fstype" = "vfat" ]
+  then
+    echo "$filename $mountpoint vfat utf8,noauto,users,umask=000,offset=$partition_offset 0 0" >> /etc/fstab
+  else
+    echo "$filename $mountpoint ext4 noauto,offset=$partition_offset 0 0" >> /etc/fstab
+  fi
   log_progress "updated /etc/fstab for $mountpoint"
 }
 
@@ -131,7 +145,7 @@ rm -rf "$STORAGE_MOUNTPOINT/snapshots"
 CAM_DISK_SIZE="$(calc_size $CAM_SIZE)"
 MUSIC_DISK_SIZE="$(calc_size $MUSIC_SIZE)"
 
-add_drive "cam" "CAM" "$CAM_DISK_SIZE" "$CAM_DISK_FILE_NAME"
+add_drive "cam" "CAM" "$CAM_DISK_SIZE" "$CAM_DISK_FILE_NAME" "ext4"
 log_progress "created camera backing file"
 
 REMAINING_SPACE="$(available_space)"
@@ -146,7 +160,7 @@ fi
 
 if [ "$REMAINING_SPACE" -ge 1024 -a "$MUSIC_DISK_SIZE" -gt 0 ]
 then
-  add_drive "music" "MUSIC" "$MUSIC_DISK_SIZE" "$MUSIC_DISK_FILE_NAME"
+  add_drive "music" "MUSIC" "$MUSIC_DISK_SIZE" "$MUSIC_DISK_FILE_NAME" "vfat"
   log_progress "created music backing file"
   echo "options g_mass_storage file=$MUSIC_DISK_FILE_NAME,$CAM_DISK_FILE_NAME removable=1,1 ro=0,0 stall=0 iSerialNumber=123456" > "$G_MASS_STORAGE_CONF_FILE_NAME"
 else
