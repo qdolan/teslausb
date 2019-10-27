@@ -61,35 +61,29 @@ function get_script () {
     chmod +x "/root/teslausb/$remote_path/$name"
 }
 
-function install_rc_local () {
+function install_archiveloop_service () {
     local install_home="$1"
 
-    if grep -q archiveloop /etc/rc.local
+    if [ -e /etc/systemd/system/archiveloop.service ]
     then
-        log_progress "Skipping rc.local installation"
+        log_progress "Skipping archiveloop.service installation"
         return
     fi
 
-    log_progress "Configuring /etc/rc.local to run the archive scripts at startup..."
-    echo "#!/bin/bash -eu" > ~/rc.local
-    echo "install_home=\"${install_home}\"" >> ~/rc.local
-    cat << 'EOF' >> ~/rc.local
-LOGFILE=/tmp/rc.local.log
+    log_progress "Configuring archiveloop.service to run at startup..."
+cat << EOF >> /etc/systemd/system/archiveloop.service
+[Service]
+Type=idle
+Restart=on-failure
+RestartSec=10
 
-function log () {
-  echo "$( date )" >> "$LOGFILE"
-  echo "$1" >> "$LOGFILE"
-}
+ExecStart=${install_home}/archiveloop
 
-log "Launching archival script..."
-"$install_home"/archiveloop &
-log "All done"
-exit 0
+[Install]
+WantedBy=multi-user.target
 EOF
-
-    cat ~/rc.local > /etc/rc.local
-    rm ~/rc.local
-    log_progress "Installed rc.local."
+    systemctl enable archiveloop.service
+    log_progress "Installed archiveloop.service."
 }
 
 function check_archive_configs () {
@@ -375,4 +369,4 @@ log_progress "Using archive module: $archive_module"
 install_archive_scripts /root/bin $archive_module
 /tmp/verify-and-configure-archive.sh
 
-install_rc_local /root/bin
+install_archiveloop_service /root/bin

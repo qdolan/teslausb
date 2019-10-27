@@ -60,9 +60,10 @@ then
   fi
 
   DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install samba
-  service smbd start
+  systemctl enable smbd
+  systemctl start smbd
   echo -e "raspberry\nraspberry\n" | smbpasswd -s -a pi
-  service smbd stop
+  systemctl stop smbd
   log_progress "Done."
 fi
 

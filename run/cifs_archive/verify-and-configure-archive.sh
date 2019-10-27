@@ -115,7 +115,9 @@ function configure_archive () {
   if ! grep -w -q "$archive_path" /etc/fstab
   then
     local sharenameforstab=$(echo $sharename | sed 's/ /\\040/g')
-    echo "//$archiveserver/$sharenameforstab $archive_path cifs credentials=${credentials_file_path},iocharset=utf8,file_mode=0777,dir_mode=0777,$VERS_OPT,$SEC_OPT 0" >> /etc/fstab
+    echo "//$archiveserver/$sharenameforstab $archive_path cifs credentials=${credentials_file_path},iocharset=utf8,file_mode=0777,dir_mode=0777,$VERS_OPT,$SEC_OPT,x-systemd.automount,nofail 0" >> /etc/fstab
+    systemctl daemon-reload
+    systemctl restart remote-fs.target
   fi
 
   if [ ! -z ${musicsharename:+x} ]
@@ -127,7 +129,9 @@ function configure_archive () {
     if ! grep -w -q "$music_archive_path" /etc/fstab
     then
       local musicsharenameforstab=$(echo $musicsharename | sed 's/ /\\040/g')
-      echo "//$archiveserver/$musicsharenameforstab $music_archive_path cifs credentials=${credentials_file_path},iocharset=utf8,file_mode=0777,dir_mode=0777,$VERS_OPT,$SEC_OPT 0" >> /etc/fstab
+      echo "//$archiveserver/$musicsharenameforstab $music_archive_path cifs credentials=${credentials_file_path},iocharset=utf8,file_mode=0777,dir_mode=0777,$VERS_OPT,$SEC_OPT,x-systemd.automount,nofail 0" >> /etc/fstab
+      systemctl daemon-reload
+      systemctl restart remote-fs.target
     fi
   fi
 

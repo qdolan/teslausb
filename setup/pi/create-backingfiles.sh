@@ -119,7 +119,7 @@ then
     ;;
   esac
 fi
-killall archiveloop || true
+systemctl stop archiveloop.service || true
 modprobe -r g_mass_storage
 umount -d /mnt/cam || true
 umount -d /mnt/music || true

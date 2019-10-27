@@ -426,10 +426,10 @@ function doubleblink () {
 }
 
 function set_time () {
-  log "Waiting for time to be set by ntpd..."
+  log "Waiting for time to be set by timesyncd..."
   for i in $(seq 1 10)
   do
-    if ntp-wait --tries=1 --sleep=1
+    if (timedatectl | grep 'System clock synchronized: yes')
     then
       log "Time now set"
       return
@@ -437,17 +437,22 @@ function set_time () {
     sleep 2
   done
   log "Time still not set, attempting to force it"
-  if ! systemctl stop ntp
+  if ! systemctl restart systemd-timesyncd
   then
-    log "Failed to stop ntp daemon"
+    log "Failed to restart timesyncd daemon"
   fi
-  if ! timeout 20 ntpd -q -x -g
+  for i in $(seq 1 10)
+  do
+    if (timedatectl | grep 'System clock synchronized: yes')
     then
-    log "Failed to set time"
+      log "Time now set"
+      return
     fi
-  if ! systemctl start ntp
+    sleep 2
+  done
+  if ! (timedatectl | grep 'System clock synchronized: yes')
   then
-    log "Failed to start ntp daemon"
+    log "Failed to set time"
   fi
 }
 

@@ -202,6 +202,7 @@ function get_ancillary_setup_scripts () {
   get_script /tmp create-backingfiles.sh setup/pi
   get_script /tmp make-root-fs-readonly.sh setup/pi
   get_script /tmp configure.sh setup/pi
+  get_script /tmp configure-systemd.sh setup/pi
 }
 
 function get_common_scripts () {
@@ -271,8 +272,36 @@ function configure_hostname () {
   fi
 }
 
+function configure_timesyncd () {
+  if ! systemctl -q is-active systemd-timesyncd
+  then
+    setup_progress "Enabling systemd-timesyncd"
+    systemctl stop ntp
+    apt-get -y remove --purge --auto-remove ntp
+    systemctl enable systemd-timesyncd
+    systemctl start systemd-timesyncd
+  fi
+}
+
 function make_root_fs_readonly () {
   /tmp/make-root-fs-readonly.sh
+}
+
+function set_time () {
+  setup_progress "Waiting for time to be set by timesyncd..."
+  for i in $(seq 1 2)
+  do
+    if (timedatectl | grep -q 'System clock synchronized: yes')
+    then
+      setup_progress "Time now set"
+      return
+    fi
+    sleep 2
+  done
+  if ! (timedatectl | grep -q 'System clock synchronized: yes')
+  then
+    setup_progress "Failed to set time"
+  fi
 }
 
 function update_package_index () {
@@ -512,6 +541,8 @@ then
 fi
 
 configure_hostname
+configure_timesyncd
+set_time
 
 update_package_index
 
@@ -564,6 +595,8 @@ headless_setup_progress_flash 4
 
 headless_setup_mark_setup_success
 
+setup_progress "calling configure-systemd"
+
 if [ "$CONFIGURE_ARCHIVING" = true ]
 then
   setup_progress "calling configure.sh"
@@ -589,6 +622,8 @@ then
   get_script /tmp configure-ap.sh setup/pi
   /tmp/configure-ap.sh
 fi
+
+/tmp/configure-systemd.sh
 
 make_root_fs_readonly
 

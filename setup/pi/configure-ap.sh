@@ -1,6 +1,4 @@
-#!/bin/bash -eu
-
-# based on https://blog.thewalr.us/2017/09/26/raspberry-pi-zero-w-simultaneous-ap-and-managed-mode-wifi/
+#! /bin/bash -eu
 
 function log_progress () {
   if typeset -f setup_progress > /dev/null; then
@@ -21,78 +19,79 @@ then
   exit 1
 fi
 
-if ! grep -q id_str /etc/wpa_supplicant/wpa_supplicant.conf
+if [ -e /etc/hostapd/hostapd-ap0.conf ]
 then
-  IP=${AP_IP:-"192.168.66.1"}
-  NET=$(echo -n $IP | sed -e 's/\.[0-9]\{1,3\}$//')
+  log_progress "AP mode already configured"
+  exit 0
+fi
 
-  # install required packages
-  log_progress "installing dnsmasq and hostapd"
-  apt-get -y --force-yes install dnsmasq hostapd
+IP=${AP_IP:-"192.168.66.1"}
 
-  log_progress "configuring AP '$AP_SSID' with IP $IP"
-  # create udev rule
-  MAC="$(cat /sys/class/net/wlan0/address)"
-  cat <<- EOF > /etc/udev/rules.d/70-persistent-net.rules
-	SUBSYSTEM=="ieee80211", ACTION=="add|change", ATTR{macaddress}=="$MAC", KERNEL=="phy0", \
-	RUN+="/sbin/iw phy phy0 interface add ap0 type __ap", \
-	RUN+="/bin/ip link set ap0 address $MAC"
-	EOF
+# install required packages
+log_progress "installing hostapd"
+apt-get -y --force-yes install hostapd
 
-  # configure dnsmasq
-  cat <<- EOF > /etc/dnsmasq.conf
-	interface=lo,ap0
-	no-dhcp-interface=lo,wlan0
-	bind-interfaces
-	bogus-priv
-	dhcp-range=${NET}.100,${NET}.150,12h
-	EOF
+log_progress "configuring AP '$AP_SSID' with IP $IP"
 
-  # configure hostapd
-  cat <<- EOF > /etc/hostapd/hostapd.conf
-	ctrl_interface=/var/run/hostapd
-	ctrl_interface_group=0
-	interface=ap0
-	driver=nl80211
-	ssid=${AP_SSID}
-	hw_mode=g
-	channel=11
-	wmm_enabled=0
-	macaddr_acl=0
-	auth_algs=1
-	wpa=2
-	wpa_passphrase=${AP_PASS}
-	wpa_key_mgmt=WPA-PSK
-	wpa_pairwise=TKIP CCMP
-	rsn_pairwise=CCMP
-	EOF
-  cat <<- EOF > /etc/default/hostapd
-	DAEMON_CONF="/etc/hostapd/hostapd.conf"
-	EOF
+cat <<EOF >/etc/udev/rules.d/70-ap-interface.rules
+SUBSYSTEM=="net", KERNEL=="wlan*", ACTION=="add", RUN+="/sbin/iw dev %k interface add ap%n type __ap"
+EOF
 
-  # define network interfaces. Note use of 'AP1' name, defined in wpa_supplication.conf below
-  cat <<- EOF > /etc/network/interfaces
-	source-directory /etc/network/interfaces.d
+cat <<EOF >/etc/systemd/network/20-ap0.network
+[Match]
+Name=ap0
 
-	auto lo
-	auto ap0
-	auto wlan0
-	iface lo inet loopback
+[Network]
+Address=${IP}/28
+DHCPServer=yes
+EOF
 
-	allow-hotplug ap0
-	iface ap0 inet static
-	    address ${IP}
-	    netmask 255.255.255.0
-	    hostapd /etc/hostapd/hostapd.conf
+udevadm trigger --action=add /sys/class/net/wlan0
+cat <<EOF >/etc/systemd/system/hostapd@.service
+[Unit]
+Description=Advanced IEEE 802.11 AP and IEEE 802.1X/WPA/WPA2/EAP Authenticator
+Requires=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+Before=network.target
+Wants=network.target
 
-	allow-hotplug wlan0
-	iface wlan0 inet manual
-	    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
-	iface AP1 inet dhcp
-	EOF
+[Service]
+Type=simple
+ExecStart=/usr/sbin/hostapd /etc/hostapd/hostapd-%I.conf
 
-  if [ ! -L /var/lib/misc ]
-  then
+[Install]
+Alias=multi-user.target.wants/hostapd@%i.service
+EOF
+
+mkdir -p /etc/hostapd/
+cat <<EOF >/etc/hostapd/hostapd-ap0.conf
+interface=ap0
+hw_mode=g
+
+ssid=${AP_SSID}
+channel=6
+ignore_broadcast_ssid=0
+
+auth_algs=1
+wpa=2
+wpa_passphrase=${AP_PASS}
+wpa_key_mgmt=WPA-PSK
+
+wmm_enabled=0
+EOF
+
+mkdir -p /etc/systemd/system/wpa_supplicant@wlan0.service.d
+cat <<EOF >/etc/systemd/system/wpa_supplicant@wlan0.service.d/override.conf
+[Unit]
+Wants=hostapd@ap0.service
+After=hostapd@ap0.service
+
+[Service]
+ExecStartPre=/bin/sleep 3
+EOF
+
+if [ ! -L /var/lib/misc ]
+then
     if ! findmnt --mountpoint /mutable
     then
         mount /mutable
@@ -100,15 +99,13 @@ then
     mkdir -p /mutable/varlib
     mv /var/lib/misc /mutable/varlib
     ln -s /mutable/varlib/misc /var/lib/misc
-  fi
-
-  # update the host name to have the AP IP address, otherwise
-  # clients connected to the IP will get 127.0.0.1 when looking
-  # up the teslausb host name
-  sed -i -e "/^127.0.0.1\s*localhost/b; s/^127.0.0.1\(\s*.*\)/$IP\1/" /etc/hosts
-
-  # add ID string to wpa_supplicant
-  sed -i -e 's/}/  id_str="AP1"\n}/'  /etc/wpa_supplicant/wpa_supplicant.conf
-else
-  log_progress "AP mode already configured"
 fi
+
+# update the host name to have the AP IP address, otherwise
+# clients connected to the IP will get 127.0.0.1 when looking
+# up the teslausb host name
+sed -i -e "/^127.0.0.1\s*localhost/b; s/^127.0.0.1\(\s*.*\)/$IP\1/" /etc/hosts
+
+systemctl daemon-reload
+systemctl enable hostapd@ap0
+

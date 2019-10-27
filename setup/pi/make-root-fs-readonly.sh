@@ -17,11 +17,10 @@ function append_cmdline_txt_param() {
 }
 
 log_progress "Removing unwanted packages..."
-apt-get remove -y --force-yes --purge triggerhappy logrotate dphys-swapfile
-apt-get -y --force-yes autoremove --purge
+apt-get remove -y --auto-remove --assume-yes --purge triggerhappy logrotate dphys-swapfile
 # Replace log management with busybox (use logread if needed)
-log_progress "Installing ntp and busybox-syslogd..."
-apt-get -y --force-yes install ntp busybox-syslogd; dpkg --purge rsyslog
+log_progress "Installing busybox-syslogd..."
+apt-get -y --assume-yes install busybox-syslogd; dpkg --purge rsyslog
 
 log_progress "Configuring system..."
 
@@ -30,7 +29,6 @@ append_cmdline_txt_param fastboot
 append_cmdline_txt_param noswap
 append_cmdline_txt_param ro
 
-# Move fake-hwclock.data to /mutable directory so it can be updated
 if ! findmnt --mountpoint /mutable
 then
     log_progress "Mounting the mutable partition..."
@@ -40,13 +38,6 @@ fi
 if [ ! -e "/mutable/etc" ]
 then
     mkdir -p /mutable/etc
-fi
-
-if [ ! -L "/etc/fake-hwclock.data" ] && [ -e "/etc/fake-hwclock.data" ]
-then
-    log_progress "Moving fake-hwclock data"
-    mv /etc/fake-hwclock.data /mutable/etc/fake-hwclock.data
-    ln -s /mutable/etc/fake-hwclock.data /etc/fake-hwclock.data
 fi
 
 # Create a configs directory for others to use
@@ -61,10 +52,6 @@ ln -s /tmp /var/spool
 
 # Change spool permissions in var.conf (rondie/Margaret fix)
 sed -i "s/spool\s*0755/spool 1777/g" /usr/lib/tmpfiles.d/var.conf >/dev/null
-
-# Move dhcpd.resolv.conf to tmpfs
-mv /etc/resolv.conf /tmp/dhcpcd.resolv.conf
-ln -s /tmp/dhcpcd.resolv.conf /etc/resolv.conf
 
 # Update /etc/fstab
 # make /boot read-only
