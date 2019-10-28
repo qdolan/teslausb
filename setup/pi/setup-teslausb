@@ -193,6 +193,7 @@ function get_script () {
   local remote_path="${3:-}"
 
   setup_progress "Linking script $local_path/$name"
+  mkdir -p "$local_path"
   ln -sf "/root/teslausb/$remote_path/$name" "$local_path/$name"
   chmod +x "/root/teslausb/$remote_path/$name"
 }
@@ -565,6 +566,14 @@ set_timezone
 
 # Flash for stage 2 headless (verify requested configuration)
 headless_setup_progress_flash 1
+
+
+if [ ! -e /root/bin/setup-teslausb ]
+then
+  get_script /root/bin setup-teslausb setup/pi
+  setup_progress "Restarting setup from /root/bin"
+  exec /root/bin/setup-teslausb "$@"
+fi
 
 setup_progress "Verifying that the requested configuration is valid..."
 
