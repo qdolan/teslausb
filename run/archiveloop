@@ -342,6 +342,8 @@ function copy_music_files () {
 
   /root/bin/copy-music.sh
 
+  trim_music_file
+
   unmount_music_file
 }
 

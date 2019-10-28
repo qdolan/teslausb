@@ -1,75 +1,16 @@
 #!/bin/bash -eu
 
-log "Copying music from archive..."
+log "Syncing music from archive..."
 
-NUM_FILES_COPIED=0
-NUM_FILES_SKIPPED=0
-NUM_FILES_ERROR=0
-SRC="/mnt/musicarchive"
-DST="/mnt/music"
+ARCHIVE_MOUNT=${STORAGE_MOUNT:-/mnt/musicarchive}
+MUSIC_MOUNT=${ARCHIVE_MOUNT:-/mnt/music}
 
-function connectionmonitor {
-  while true
-  do
-    for i in $(seq 1 10)
-    do
-      if timeout 3 /root/bin/archive-is-reachable.sh $ARCHIVE_HOST_NAME
-      then
-        # sleep and then continue outer loop
-        sleep 5
-        continue 2
-      fi
-    done
-    log "connection dead, killing archive-clips"
-    # The archive loop might be stuck on an unresponsive server, so kill it hard.
-    # (should be no worse than losing power in the middle of an operation)
-    kill -9 $1
-    return
-  done
-}
+num_files=$(rsync -rtvhL --timeout=60 --no-perms --stats --log-file=/tmp/music-rsync-cmd.log "$ARCHIVE_MOUNT"/ "$MUSIC_MOUNT" | awk '/files transferred/{print $NF}')
 
-if ! findmnt --mountpoint $DST
+if (( num_files > 0 ))
 then
-  log "$DST not mounted, skipping"
-  exit
-fi
-
-connectionmonitor $$ &
-
-while read file_name
-do
-  if [ ! -e "$DST/$file_name" ]
-  then
-    dir=$(dirname "$file_name")
-    if ! mkdir -p "$DST/$dir"
-    then
-      log "couldn't make directory $DST/$dir"
-      NUM_FILES_ERROR=$((NUM_FILES_ERROR + 1))
-      continue
-    fi
-    if ! cp "$SRC/$file_name" "$DST/$dir/__tmp__"
-    then
-      log "Couldn't copy $SRC/$file_name"
-      NUM_FILES_ERROR=$((NUM_FILES_ERROR + 1))
-      continue
-    fi
-    if ! mv "$DST/$dir/__tmp__" "$DST/$file_name"
-    then
-      log "Couldn't move to $DST/$file_name"
-      NUM_FILES_ERROR=$((NUM_FILES_ERROR + 1))
-      continue
-    fi
-    NUM_FILES_COPIED=$((NUM_FILES_COPIED + 1))
-  else
-    NUM_FILES_SKIPPED=$((NUM_FILES_SKIPPED + 1))
-  fi
-done <<< "$(cd "$SRC"; find * -type f)"
-
-kill %1
-
-log "Copied $NUM_FILES_COPIED music file(s), skipped $NUM_FILES_SKIPPED previously-copied files, encountered $NUM_FILES_ERROR errors."
-
-if [ $NUM_FILES_COPIED -gt 0 ]
-then
-  /root/bin/send-push-message "TeslaUSB:" "Copied $NUM_FILES_COPIED music file(s), skipped $NUM_FILES_SKIPPED previously-copied files, encountered $NUM_FILES_ERROR errors."
+  log "Successfully synced $num_files files through rsync."
+  /root/bin/send-push-message "TeslaUSB:" "Synced $num_files music file(s)."
+else
+  log "No files synced."
 fi
