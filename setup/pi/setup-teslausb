@@ -176,9 +176,9 @@ function clone_repo () {
   then
     setup_progress "Cloning git repo: https://github.com/${REPO}/teslausb.git ..."
     git clone "https://github.com/${REPO}/teslausb.git" /root/teslausb
-    pushd /root/teslausb
+    pushd /root/teslausb > /dev/null
     git checkout "${BRANCH}"
-    popd
+    popd > /dev/null
   fi
 }
 
@@ -351,14 +351,14 @@ function set_timezone () {
 
 function cmd_selfupdate {
   clone_repo
-  pushd /root/teslausb
+  pushd /root/teslausb > /dev/null
   if git pull | grep -q "Already up to date."
     then
       setup_progress "$0 already up to date"
     else
       setup_progress "$0 updated"
   fi
-  popd
+  popd > /dev/null
   chmod +x /root/bin/*
   exit 0
 }
@@ -548,7 +548,7 @@ set_time
 update_package_index
 
 clone_repo
-pushd /root/teslausb
+pushd /root/teslausb > /dev/null
 git remote update 2>&2 >/dev/null
 if [ "$(git status --branch --porcelain | wc -l)" -eq 0 ]
 then
@@ -556,7 +556,7 @@ then
 else
   setup_progress "WARNING: remote repo contains updates. It is recommended to run '$0 selfupdate' to update to the latest version"
 fi
-popd
+popd > /dev/null
 
 # If USE_LED_FOR_SETUP_PROGRESS = true.
 setup_led_off
@@ -590,7 +590,7 @@ get_common_scripts
 
 get_ancillary_setup_scripts
 
-pushd ~
+pushd ~ > /dev/null
 
 fix_cmdline_txt_modules_load
 
