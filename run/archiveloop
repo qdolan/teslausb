@@ -252,7 +252,7 @@ function wait_for_archive_to_be_unreachable () {
 }
 
 function check_if_usb_gadget_is_mounted () {
-    if [ ! -d /sys/devices/platform/soc/??980000.usb/gadget/lun0 ]
+    if ! grep -q cam_disk.bin /sys/devices/platform/soc/??980000.usb/gadget/lun?/file >/dev/null 2>&1
     then
         log "USB Gadget not mounted. Fixing files and remounting..."
         disconnect_usb_drives_from_host
@@ -264,7 +264,7 @@ function check_if_usb_gadget_is_mounted () {
 function mount_and_fix_errors_in_cam_file () {
   fix_errors_in_cam_file
   ensure_cam_file_is_mounted
-  trim_cam_file 
+  trim_cam_file
   unmount_cam_file
 }
 
