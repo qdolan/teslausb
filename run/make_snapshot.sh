@@ -6,6 +6,8 @@ then
   return 1 # shouldn't use exit when sourced
 fi
 
+typeset -f log || log() { echo "make_snapshot: $1"; }
+
 STORAGE_MOUNT=${STORAGE_MOUNT:-/backingfiles}
 
 if [ "${FLOCKED:-}" != "$0" ]
@@ -24,7 +26,7 @@ then
   fi
 fi
 
-function linksnapshotfiletorecents {
+function linksnapshotfiletorecents() {
   local file=$1
   local curmnt=$2
   local finalmnt=$3
@@ -36,7 +38,7 @@ function linksnapshotfiletorecents {
   ln -sf "$(echo $file | sed "s@$curmnt@$finalmnt@")" $recents/$filedate
 }
 
-function make_links_for_snapshot {
+function make_links_for_snapshot() {
   local saved="${STORAGE_MOUNT}"/TeslaCam/SavedClips
   local sentry="${STORAGE_MOUNT}"/TeslaCam/SentryClips
   mkdir -p $saved
@@ -81,7 +83,7 @@ function make_links_for_snapshot {
   log "made all links for $curmnt"
 }
 
-function snapshot {
+function check_freespace() {
   # Only take a snapshot when the remaining free space is greater than
   # 512MB (reflinked snapshots don't use much space).
   # Delete older snapshots if necessary to achieve that.
@@ -92,7 +94,7 @@ function snapshot {
   while true
   do
     local freespace=$(eval $(stat --file-system --format='echo $((%f*%S))' "${STORAGE_MOUNT}"/cam_disk.bin))
-    if [ $(( freespace > (512 * 1024 * 1024) )) ]
+    if (( freespace > 512 * 1024 * 1024 ))
     then
       break
     fi
@@ -106,6 +108,10 @@ function snapshot {
     /root/bin/release_snapshot.sh "$oldest/mnt"
     rm -rf "$oldest"
   done
+}
+
+function snapshot() {
+  check_freespace
 
   local oldnum=-1
   local newnum=0

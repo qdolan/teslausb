@@ -105,6 +105,24 @@ EOF
     chmod +x /opt/otgmassstorage/start.sh
     systemctl enable otg_mass_storage
 fi
+if systemctl is-active fstrim.timer | grep -q inactive
+then
+    log_progress "enabling fstrim.timer service"
+    cat <<EOF > /etc/systemd/system/fstrim.timer
+[Unit]
+Description=Discard unused blocks once on bootup
+Documentation=man:fstrim
+
+[Timer]
+OnBootSec=50
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+    systemctl enable fstrim.timer
+fi
+
 if ! systemctl is-active bluetooth | grep -q inactive
 then
     log_progress "disabling bluetooth"

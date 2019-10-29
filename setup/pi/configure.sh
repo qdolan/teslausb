@@ -86,6 +86,38 @@ EOF
     log_progress "Installed archiveloop.service."
 }
 
+function install_snapshot_service () {
+    local install_home="$1"
+
+    if ! systemctl is-active make_snapshot.path | grep -q inactive
+    then
+        log_progress "Skipping make_snapshot service installation"
+        return
+    fi
+
+    log_progress "Configuring make_snapshot service to run at startup..."
+cat << EOF > /etc/systemd/system/make_snapshot.service
+[Unit]
+Description=Make a new snapshot
+
+[Service]
+Type=simple
+ExecStart=${install_home}/make_snapshot.sh
+EOF
+cat << EOF > /etc/systemd/system/make_snapshot.path
+[Unit]
+Description=Monitor make_snapshot trigger file
+
+[Path]
+PathModified=/tmp/make_snapshot
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl enable make_snapshot.path
+    log_progress "Installed make_snapshot service."
+}
+
 function check_archive_configs () {
     log_progress "Checking archive configs: "
 

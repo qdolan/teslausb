@@ -483,8 +483,8 @@ function mount_all_snapshots {
 function snapshotloop {
   while true
   do
+    /root/bin/trigger_snapshot.sh
     sleep 3500
-    /root/bin/make_snapshot.sh
   done
 }
 
@@ -498,15 +498,10 @@ export -f log
 echo "==============================================" >> "$LOG_FILE"
 log "Starting archiveloop..."
 
-
-fstrim -a
-sync
-
 mount_all_snapshots
 
 if [ "${SNAPSHOTS_ENABLED:-true}" = "true" ]
 then
-  /root/bin/make_snapshot.sh
   snapshotloop &
 fi
 
@@ -532,7 +527,7 @@ else
   connect_usb_drives_to_host
 fi
 
-while [ true ]
+while true
 do
   slowblink
 
