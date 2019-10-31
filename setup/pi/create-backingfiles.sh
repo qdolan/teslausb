@@ -161,7 +161,7 @@ if [ "$REMAINING_SPACE" -ge 1024 -a "$MUSIC_DISK_SIZE" -gt 0 ]
 then
   add_drive "music" "MUSIC" "$MUSIC_DISK_SIZE" "$MUSIC_DISK_FILE_NAME" "vfat"
   log_progress "created music backing file"
-  echo "options g_mass_storage file=$MUSIC_DISK_FILE_NAME,$CAM_DISK_FILE_NAME removable=1,1 ro=0,0 stall=0 iSerialNumber=123456" > "$G_MASS_STORAGE_CONF_FILE_NAME"
+  echo "options g_mass_storage file=$CAM_DISK_FILE_NAME,$MUSIC_DISK_FILE_NAME removable=1,1 ro=0,0 stall=0 iSerialNumber=123456" > "$G_MASS_STORAGE_CONF_FILE_NAME"
 else
   echo "options g_mass_storage file=$CAM_DISK_FILE_NAME removable=1 ro=0 stall=0 iSerialNumber=123456" > "$G_MASS_STORAGE_CONF_FILE_NAME"
 fi

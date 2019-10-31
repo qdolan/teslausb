@@ -2,8 +2,8 @@
 
 log "Syncing music from archive..."
 
-ARCHIVE_MOUNT=${STORAGE_MOUNT:-/mnt/musicarchive}
-MUSIC_MOUNT=${ARCHIVE_MOUNT:-/mnt/music}
+ARCHIVE_MOUNT=${ARCHIVE_MOUNT:-/mnt/musicarchive}
+MUSIC_MOUNT=${1:-/mnt/music}
 
 num_files=$(rsync -rtvhL --timeout=60 --no-perms --stats --log-file=/tmp/music-rsync-cmd.log "$ARCHIVE_MOUNT"/ "$MUSIC_MOUNT" | awk '/files transferred/{print $NF}')
 

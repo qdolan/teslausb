@@ -98,6 +98,7 @@ function install_snapshot_service () {
 cat << EOF > /etc/systemd/system/make_snapshot.service
 [Unit]
 Description=Make a new snapshot
+PartOf=archiveloop.service
 
 [Service]
 Type=simple
@@ -106,6 +107,7 @@ EOF
 cat << EOF > /etc/systemd/system/make_snapshot.path
 [Unit]
 Description=Monitor make_snapshot trigger file
+PartOf=archiveloop.service
 
 [Path]
 PathModified=/tmp/make_snapshot

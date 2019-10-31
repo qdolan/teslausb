@@ -526,7 +526,7 @@ then
   setup_progress "WARNING: 'INSTALL_DIR' setup variable no longer supported"
 fi
 
-if [ -n ${1:+x} ]
+if [ ! -z ${1:+x} ]
 then
   if typeset -f "cmd_$1" > /dev/null; then
     "cmd_$1"

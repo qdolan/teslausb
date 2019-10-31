@@ -62,6 +62,13 @@ function linksnapshotfiles() {
   done
 }
 
+function delete_dead_links() {
+  # delete all dead links
+  find "${STORAGE_MOUNT}"/TeslaCam/ -xtype l -exec 'rm' '-f' '{}' \;
+  # delete all Sentry folders that are now empty
+  rmdir --ignore-fail-on-non-empty "${STORAGE_MOUNT}"/TeslaCam/*/* || true
+}
+
 function make_links_for_snapshot() {
   local saved="${STORAGE_MOUNT}"/TeslaCam/SavedClips
   local sentry="${STORAGE_MOUNT}"/TeslaCam/SentryClips
@@ -91,7 +98,7 @@ function make_links_for_snapshot() {
 
 function check_freespace() {
   # Only take a snapshot when the remaining free space is greater than
-  # 512MB (reflinked snapshots don't use much space).
+  # 2GB (reflinked snapshots don't use much space).
   # Delete older snapshots if necessary to achieve that.
   # space requirement, to delete old snapshots just before running out
   # of space and thus make better use of space
@@ -99,7 +106,7 @@ function check_freespace() {
   while true
   do
     local freespace=$(eval $(stat --file-system --format='echo $((%f*%S))' "${STORAGE_MOUNT}"/cam_disk.bin))
-    if (( freespace > 512 * 1024 * 1024 ))
+    if (( freespace > (2048 * 1024 * 1024) ))
     then
       break
     fi
@@ -113,6 +120,7 @@ function check_freespace() {
     /root/bin/release_snapshot.sh "$oldest/mnt"
     rm -rf "$oldest"
   done
+  delete_dead_links
 }
 
 function snapshot() {
