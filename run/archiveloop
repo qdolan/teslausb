@@ -313,21 +313,18 @@ function replace_image() {
     local new_img=$2
 
     log "Replacing disk image $org_img with $new_img"
-    lun=$(grep "$org_img" /sys/devices/platform/soc/??980000.usb/gadget/lun?/file | head -1 | sed 's@:.*$@@')
-    echo > "$lun"
-    mv "$new_img" "$org_img"
-    echo "$org_img" > "$lun"
+    ln -f "$new_img" "$org_img"
+    modprobe -r g_mass_storage
+    modprobe g_mass_storage
 }
 
 function copy_music_files () {
   log "Starting music sync..."
 
-  /root/bin/mount_image.sh "$STORAGE_MOUNT"/music_disk.bin "$STORAGE_MOUNT"/music_snap.bin /mnt/music_snap
-
+  /root/bin/mount_image.sh "$STORAGE_MOUNT"/music_disk.bin /mnt/music_snap
+  mount /mnt/music_snap -o remount,rw
   /root/bin/copy-music.sh /mnt/music_snap
-
   /root/bin/release_snapshot.sh /mnt/music_snap
-
   replace_image "$STORAGE_MOUNT"/music_disk.bin "$STORAGE_MOUNT"/music_snap.bin
 }
 

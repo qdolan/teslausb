@@ -3,7 +3,7 @@
 # Adapted from https://github.com/adafruit/Raspberry-Pi-Installer-Scripts/blob/master/read-only-fs.sh
 
 
-typeset -f setup_progress || setup_progress() { echo "$*"; }
+typeset -f setup_progress > /dev/null || setup_progress() { echo "$*"; }
 
 function log_progress () {
   setup_progress "make-root-fs-readonly: $*"
@@ -21,6 +21,7 @@ apt-get remove -y --auto-remove --assume-yes --purge triggerhappy logrotate dphy
 # Replace log management with busybox (use logread if needed)
 log_progress "Installing busybox-syslogd..."
 apt-get -y --assume-yes install busybox-syslogd; dpkg --purge rsyslog
+apt-get -y --assume-yes clean
 
 log_progress "Configuring system..."
 

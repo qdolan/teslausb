@@ -6,7 +6,7 @@ then
   return 1 # shouldn't use exit when sourced
 fi
 
-typeset -f log || log() { echo "make_snapshot: $1"; }
+typeset -f log > /dev/null || log() { echo "make_snapshot: $1"; }
 
 STORAGE_MOUNT=${STORAGE_MOUNT:-/backingfiles}
 

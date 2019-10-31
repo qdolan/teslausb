@@ -5,7 +5,7 @@ log "syncing clips to archive..."
 STORAGE_MOUNT=${STORAGE_MOUNT:-/backingfiles}
 ARCHIVE_MOUNT=${ARCHIVE_MOUNT:-/mnt/archive}
 
-num_files=$(rsync -rtvhL --timeout=60 --no-perms --stats --log-file=/tmp/archive-rsync-cmd.log "$STORAGE_MOUNT"/TeslaCam/SentryClips "$STORAGE_MOUNT"/TeslaCam/SavedClips "$ARCHIVE_MOUNT"/ | awk '/files transferred/{print $NF}')
+num_files=$(rsync -rtvhL --timeout=60 --no-perms --stats "$STORAGE_MOUNT"/TeslaCam/SentryClips "$STORAGE_MOUNT"/TeslaCam/SavedClips "$ARCHIVE_MOUNT"/ | awk '/files transferred/{print $NF}')
 
 if (( num_files > 0 ))
 then

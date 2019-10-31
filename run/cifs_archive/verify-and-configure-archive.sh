@@ -3,7 +3,7 @@
 VERS_OPT=
 SEC_OPT=
 
-typeset -f setup_progress || setup_progress() { echo "$*"; }
+typeset -f setup_progress > /dev/null || setup_progress() { echo "$*"; }
 
 function log_progress () {
   setup_progress "verify-and-configure-archive: $*"
