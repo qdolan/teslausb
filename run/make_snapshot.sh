@@ -28,66 +28,71 @@ fi
 
 function linksnapshotfiletorecents() {
   local file=$1
-  local curmnt=$2
-  local finalmnt=$3
   local recents="${STORAGE_MOUNT}"/TeslaCam/RecentClips
 
-  filename=$(basename $file)
-  filedate=$(echo $filename | cut -c -10)
-  mkdir -p $recents/$filedate
-  ln -sf "$(echo $file | sed "s@$curmnt@$finalmnt@")" $recents/$filedate
+  filename=$(basename "$file")
+  filedate=$(echo "$filename" | cut -c -10)
+  if [ ! -d "$recents/$filedate" ]
+  then
+    mkdir -p "$recents/$filedate"
+  fi
+  ln -sf "$file" "$recents/$filedate"
+}
+
+function linkrecentfiles() {
+  for f
+  do
+    linksnapshotfiletorecents "$f"
+  done
+}
+
+function linksnapshotfiles() {
+  local path=$1;
+  shift;
+  for f
+  do
+    linksnapshotfiletorecents "$f"
+    # also link it into a SavedClips folder
+    local eventtime=$(basename "$(dirname "$f")")
+    if [ ! -d "$path/$eventtime" ]
+    then
+      mkdir -p "$path/$eventtime"
+    fi
+    ln -sf "$f" "$path/$eventtime"
+  done
 }
 
 function make_links_for_snapshot() {
   local saved="${STORAGE_MOUNT}"/TeslaCam/SavedClips
   local sentry="${STORAGE_MOUNT}"/TeslaCam/SentryClips
-  mkdir -p $saved
-  mkdir -p $sentry
-  local curmnt="$1"
-  local finalmnt="$2"
-  log "making links for $curmnt, retargeted to $finalmnt"
-  if stat $curmnt/TeslaCam/RecentClips/* > /dev/null
+  mkdir -p "$saved"
+  mkdir -p "$sentry"
+  local mnt="$1"
+  log "making links for $mnt"
+  if stat "$mnt"/TeslaCam/RecentClips/* > /dev/null 2>&1
   then
     log " - linking recent clips"
-    for f in $curmnt/TeslaCam/RecentClips/*
-    do
-      log "linking $f"
-      linksnapshotfiletorecents $f $curmnt $finalmnt
-    done
+    linkrecentfiles "$mnt"/TeslaCam/RecentClips/*
   fi
   # also link in any files that were moved to SavedClips
-  if stat $curmnt/TeslaCam/SavedClips/*/* > /dev/null
+  if stat "$mnt"/TeslaCam/SavedClips/*/* > /dev/null 2>&1
   then
-    for f in $curmnt/TeslaCam/SavedClips/*/*
-    do
-      log "linking $f"
-      linksnapshotfiletorecents $f $curmnt $finalmnt
-      # also link it into a SavedClips folder
-      local eventtime=$(basename $(dirname $f))
-      mkdir -p $saved/$eventtime
-      ln -sf $(echo $f | sed "s@$curmnt@$finalmnt@") $saved/$eventtime
-    done
+    log " - linking saved clips"
+    linksnapshotfiles "$saved" "$mnt"/TeslaCam/SavedClips/*/*
   fi
   # and the same for SentryClips
-  if stat $curmnt/TeslaCam/SentryClips/*/* > /dev/null
+  if stat "$mnt"/TeslaCam/SentryClips/*/* > /dev/null 2>&1
   then
-    for f in $curmnt/TeslaCam/SentryClips/*/*
-    do
-      log "linking $f"
-      linksnapshotfiletorecents $f $curmnt $finalmnt
-      local eventtime=$(basename $(dirname $f))
-      mkdir -p $sentry/$eventtime
-      ln -sf $(echo $f | sed "s@$curmnt@$finalmnt@") $sentry/$eventtime
-    done
+    log " - linking sentry clips"
+    linksnapshotfiles "$sentry" "$mnt"/TeslaCam/SentryClips/*/*
   fi
-  log "made all links for $curmnt"
+  log "made all links for $mnt"
 }
 
 function check_freespace() {
   # Only take a snapshot when the remaining free space is greater than
   # 512MB (reflinked snapshots don't use much space).
   # Delete older snapshots if necessary to achieve that.
-  # todo: this could be put in a background task and with a lower free
   # space requirement, to delete old snapshots just before running out
   # of space and thus make better use of space
   local imgsize=$(eval $(stat --format='echo $((%b*%B))' "${STORAGE_MOUNT}"/cam_disk.bin))
@@ -136,8 +141,8 @@ function snapshot() {
   log "comparing $oldname.toc and $tmpsnapname.toc"
   if [[ ! -e "$oldname.toc" ]] || diff "$oldname.toc" "$tmpsnapname.toc" | grep -e '^>'
   then
-    make_links_for_snapshot "$tmpsnapmnt" "$newsnapdir/mnt"
     mv "$tmpsnapdir" "$newsnapdir"
+    make_links_for_snapshot "$newsnapdir/mnt"
   else
     log "new snapshot is identical to previous one, discarding"
     /root/bin/release_snapshot.sh "$tmpsnapmnt"
@@ -145,8 +150,27 @@ function snapshot() {
   fi
 }
 
+function relink_snapshots() {
+  local links_file=/tmp/.snapshots_links.$$
+  ls -1lR "$STORAGE_MOUNT"/TeslaCam/ > "$links_file"
+  for mnt in "$STORAGE_MOUNT"/snapshots/snap-*/mnt
+  do
+  if ! grep -q "$mnt" "$links_file"
+  then
+    make_links_for_snapshot "$mnt"
+  fi
+  done
+  rm "$links_file"
+}
+
 if ! snapshot
 then
   log "failed to take snapshot"
 fi
 
+# WARNING: This could take a long time with lots of snapshots
+if [ -e /tmp/relink_snapshots ]
+then
+  rm /tmp/relink_snapshots
+  relink_snapshots
+fi
