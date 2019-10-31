@@ -349,10 +349,6 @@ function archive_clips () {
 
   if timeout 5 [ -d "$MUSIC_ARCHIVE_MOUNT" -a -d "$MUSIC_MOUNT" ]
   then
-    #fixme - disabled until I can rewrite to not disconnect the drive
-    return
-
-    disconnect_usb_drives_from_host
     log "Copying music..."
     if copy_music_files
     then
@@ -360,7 +356,6 @@ function archive_clips () {
     else
       log "Copying music failed."
     fi
-    connect_usb_drives_to_host
   else
     log "Music archive not configured or unreachable"
   fi
