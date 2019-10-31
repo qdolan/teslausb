@@ -1,10 +1,9 @@
 #! /bin/bash
 
+typeset -f setup_progress || setup_progress() { echo "$*"; }
+
 function log_progress () {
-  if typeset -f setup_progress > /dev/null; then
-    setup_progress "configure-samba: $1"
-  fi
-  echo "configure-samba: $1"
+  setup_progress "configure-samba: $*"
 }
 
 SAMBA_GUEST=${SAMBA_GUEST:-false}

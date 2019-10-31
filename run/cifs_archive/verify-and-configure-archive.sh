@@ -3,11 +3,10 @@
 VERS_OPT=
 SEC_OPT=
 
+typeset -f setup_progress || setup_progress() { echo "$*"; }
+
 function log_progress () {
-  if typeset -f setup_progress > /dev/null; then
-    setup_progress "verify-and-configure-archive: $@"
-  fi
-  echo "verify-and-configure-archive: $1"
+  setup_progress "verify-and-configure-archive: $*"
 }
 
 function check_archive_server_reachable () {

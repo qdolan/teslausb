@@ -1,9 +1,6 @@
 #!/bin/bash -eu
 
 function log_progress () {
-  if typeset -f setup_progress > /dev/null; then
-    setup_progress "verify-and-configure-archive: $@"
-  fi
   echo "verify-and-configure-archive: $1"
 }
 

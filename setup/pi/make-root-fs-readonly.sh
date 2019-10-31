@@ -2,11 +2,11 @@
 
 # Adapted from https://github.com/adafruit/Raspberry-Pi-Installer-Scripts/blob/master/read-only-fs.sh
 
+
+typeset -f setup_progress || setup_progress() { echo "$*"; }
+
 function log_progress () {
-  if typeset -f setup_progress > /dev/null; then
-    setup_progress "make-root-fs-readonly: $1"
-  fi
-  echo "make-root-fs-readonly: $1"
+  setup_progress "make-root-fs-readonly: $*"
 }
 
 log_progress "start"

@@ -6,11 +6,10 @@ then
   return 1 # shouldn't use exit when sourced
 fi
 
+typeset -f setup_progress || setup_progress() { echo "$*"; }
+
 function log_progress () {
-  if typeset -f setup_progress > /dev/null; then
-    setup_progress "configure: $1"
-  fi
-  echo "configure: $1"
+  setup_progress "configure: $*"
 }
 
 if [ "${FLOCKED:-}" != "$0" ]

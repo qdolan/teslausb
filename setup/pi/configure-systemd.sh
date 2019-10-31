@@ -1,10 +1,9 @@
 #! /bin/bash -eu
 
+typeset -f setup_progress || setup_progress() { echo "$*"; }
+
 function log_progress () {
-  if typeset -f setup_progress > /dev/null; then
-    setup_progress "configure-systemd: $1"
-  fi
-  echo "configure-systemd: $1"
+  setup_progress "configure-systemd: $*"
 }
 
 if [ ! -e /etc/systemd/network/10-usb0.network ]
@@ -80,7 +79,7 @@ killall dhcpcd || true
 systemctl daemon-reload
 ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
 
-if systemctl is-active otg_mass_storage | grep -q inactive
+if [ ! -e /etc/systemd/system/otg_mass_storage.service ]
 then
     log_progress "adding OTG Mass Storage service"
     cat <<EOF > /etc/systemd/system/otg_mass_storage.service
@@ -105,7 +104,7 @@ EOF
     chmod +x /opt/otgmassstorage/start.sh
     systemctl enable otg_mass_storage
 fi
-if systemctl is-active fstrim.timer | grep -q inactive
+if [ ! -e /etc/systemd/system/fstrim.timer ]
 then
     log_progress "enabling fstrim.timer service"
     cat <<EOF > /etc/systemd/system/fstrim.timer
@@ -123,7 +122,7 @@ EOF
     systemctl enable fstrim.timer
 fi
 
-if ! systemctl is-active bluetooth | grep -q inactive
+if systemctl is-active bluetooth | grep -q ^active
 then
     log_progress "disabling bluetooth"
     systemctl disable bluetooth

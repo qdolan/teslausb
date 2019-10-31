@@ -353,6 +353,7 @@ function set_timezone () {
 function cmd_selfupdate {
   clone_repo
   pushd /root/teslausb > /dev/null
+  git reset --hard
   if git pull | grep -q "Already up to date."
     then
       setup_progress "$0 already up to date"
@@ -525,10 +526,10 @@ then
   setup_progress "WARNING: 'INSTALL_DIR' setup variable no longer supported"
 fi
 
-if [ ! -z ${1:+x} ]
+if [ -n ${1:+x} ]
 then
-  if typeset -f cmd_$1 > /dev/null; then
-    cmd_$1
+  if typeset -f "cmd_$1" > /dev/null; then
+    "cmd_$1"
     exit 0
   else
     setup_progress "unknown command: $1"

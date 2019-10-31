@@ -24,8 +24,6 @@ fi
 # turning off hdmi saves a little bit of power
 /usr/bin/tvservice -o
 
-export LOG_FILE=/mutable/archiveloop.log
-
 export STORAGE_MOUNT=/backingfiles
 export ARCHIVE_MOUNT=/mnt/archive
 export CAM_MOUNT=/mnt/cam
@@ -34,8 +32,7 @@ export ARCHIVE_MOUNT=/mnt/archive
 export MUSIC_ARCHIVE_MOUNT=/mnt/musicarchive
 
 function log () {
-  echo -n "$( date ): " >> "$LOG_FILE"
-  echo "$1" >> "$LOG_FILE"
+  echo "$1"
 }
 
 if [ ! -f /root/teslausb.conf ]
@@ -77,7 +74,7 @@ function fix_errors_in_mount_point () {
   log "Running fsck on $mount_point..."
   local backingfile=$(mount | grep -w "$mount_point" | awk '{print $1}')
   local loopback=$(losetup -l | grep -w  "$backingfile" | awk '{print $1}')
-  fsck -p "$loopback" |& timestamp '| ' >> "$LOG_FILE" || echo ""
+  fsck -p "$loopback" |& timestamp '| ' || echo ""
   log "Finished fsck on $mount_point."
 }
 
@@ -148,7 +145,7 @@ function mount_mountpoint () {
   log "Mounting $mount_point..."
 
   local mounted=true
-  mount "$mount_point" >> "$LOG_FILE" 2>&1 || mounted=false
+  mount "$mount_point" || mounted=false
   if [ "$mounted" = true ]
   then
     log "Mounted $mount_point."
@@ -202,12 +199,12 @@ function ensure_music_file_is_mounted () {
 function unmount_mount_point () {
   local mount_point="$1"
   log "Unmounting $mount_point..."
-  if umount "$mount_point" >> "$LOG_FILE" 2>&1
+  if umount "$mount_point"
   then
     log "Unmounted $mount_point."
   else
     log "Failed to unmount $mount_point, trying lazy unmount."
-    if umount -l "$mount_point" >> "$LOG_FILE" 2>&1
+    if umount -l "$mount_point"
     then
       log "lazily unmounted $mount_point"
     else
@@ -311,7 +308,7 @@ function archive_teslacam_clips () {
             if [ "false" = "${is_sentry_mode_enabled}" ]
             then
                 log "Temporarily enabling Sentry Mode to power the RPi while archive job completes..."
-                /root/bin/tesla_api.py enable_sentry_mode &>> ${LOG_FILE}
+                /root/bin/tesla_api.py enable_sentry_mode
             fi
         fi
 
@@ -323,7 +320,7 @@ function archive_teslacam_clips () {
 	    if [ "false" = "${is_sentry_mode_enabled}" ]
 	    then
 	        log "Restoring Sentry Mode to its previous state (disabled)..."
-   	         /root/bin/tesla_api.py disable_sentry_mode &>> ${LOG_FILE}
+   	         /root/bin/tesla_api.py disable_sentry_mode
 	    fi
 	fi
     fi
@@ -376,17 +373,6 @@ function archive_clips () {
     connect_usb_drives_to_host
   else
     log "Music archive not configured or unreachable"
-  fi
-}
-
-function truncate_log () {
-  local log_length=$( wc -l "$LOG_FILE" | cut -d' ' -f 1 )
-  if [ "$log_length" -gt 10000 ]
-  then
-    log "Truncating log..."
-    local log_file2="${LOG_FILE}.2"
-    tail -n 10000 "$LOG_FILE" > "${LOG_FILE}.2"
-	mv "$log_file2" "$LOG_FILE"
   fi
 }
 
@@ -495,7 +481,7 @@ export -f retry
 export -f ensure_mountpoint_is_mounted_with_retry
 export -f log
 
-echo "==============================================" >> "$LOG_FILE"
+echo "=============================================="
 log "Starting archiveloop..."
 
 mount_all_snapshots
@@ -546,8 +532,6 @@ then
 fi
 
   archive_clips
-
-  truncate_log
 
   doubleblink
 

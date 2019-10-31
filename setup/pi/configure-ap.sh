@@ -1,10 +1,9 @@
 #! /bin/bash -eu
 
+typeset -f setup_progress || setup_progress() { echo "$*"; }
+
 function log_progress () {
-  if typeset -f setup_progress > /dev/null; then
-    setup_progress "configure-ap: $1"
-  fi
-  echo "configure-ap: $1"
+  setup_progress "configure-ap: $*"
 }
 
 if [ -z "${AP_SSID+x}" ]
