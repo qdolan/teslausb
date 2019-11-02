@@ -313,19 +313,30 @@ function replace_image() {
     local new_img=$2
 
     log "Replacing disk image $org_img with $new_img"
-    ln -f "$new_img" "$org_img"
     modprobe -r g_mass_storage
+    mv "$new_img" "$org_img"
     modprobe g_mass_storage
 }
 
 function copy_music_files () {
   log "Starting music sync..."
+  local image="$STORAGE_MOUNT"/music_disk.bin
+  local snap="$STORAGE_MOUNT"/music_disk.snap
+  local mnt="$STORAGE_MOUNT"/music_snap.mnt
 
-  /root/bin/mount_image.sh "$STORAGE_MOUNT"/music_disk.bin /mnt/music_snap
-  mount /mnt/music_snap -o remount,rw
-  /root/bin/copy-music.sh /mnt/music_snap
-  /root/bin/release_snapshot.sh /mnt/music_snap
-  replace_image "$STORAGE_MOUNT"/music_disk.bin "$STORAGE_MOUNT"/music_snap.bin
+  /root/bin/mount_snapshot.sh "$image" "$snap" "$mnt"
+  mount "$mnt" -o remount,rw
+  find "$mnt" -type f -printf '%s %P\n' > "$image".toc
+  /root/bin/copy-music.sh "$mnt"
+  find "$mnt" -type f -printf '%s %P\n' > "$snap".toc
+  /root/bin/release_snapshot.sh "$mnt"
+  if diff "$image".toc "$snap".toc | grep -q -e '^>'
+  then
+    replace_image "$image" "$snap"
+  else
+    rm "$snap"
+  fi
+  rm "$image".toc "$snap".toc
 }
 
 function archive_clips () {

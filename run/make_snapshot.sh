@@ -142,6 +142,7 @@ function snapshot() {
   log "taking snapshot of cam disk: $newname"
   rm -rf "$tmpsnapdir"
   /root/bin/mount_snapshot.sh "${STORAGE_MOUNT}"/cam_disk.bin "$tmpsnapname" "$tmpsnapmnt"
+  fstrim "$tmpsnapmnt"
   log "took snapshot"
 
   # check whether this snapshot is actually different from the previous one

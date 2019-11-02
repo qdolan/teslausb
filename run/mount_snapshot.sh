@@ -38,5 +38,4 @@ PARTLOOP=$(losetup -j $SNAP | awk '{print $1}' | sed 's/:/p1/')
 fsck -p $PARTLOOP || true
 
 mount -o ro $PARTLOOP $MNT
-fstrim $MNT
 
