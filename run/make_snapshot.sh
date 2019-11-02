@@ -97,16 +97,17 @@ function make_links_for_snapshot() {
 }
 
 function check_freespace() {
-  # Only take a snapshot when the remaining free space is greater than
-  # 2GB (reflinked snapshots don't use much space).
-  # Delete older snapshots if necessary to achieve that.
+  # Only take a snapshot when there is a free space buffer of at least 2GB.
+  # Delete older snapshots if necessary to achieve that
   # space requirement, to delete old snapshots just before running out
   # of space and thus make better use of space
-  local imgsize=$(eval $(stat --format='echo $((%b*%B))' "${STORAGE_MOUNT}"/cam_disk.bin))
   while true
   do
-    local freespace=$(eval $(stat --file-system --format='echo $((%f*%S))' "${STORAGE_MOUNT}"/cam_disk.bin))
-    if (( freespace > (2048 * 1024 * 1024) ))
+    local freespace=$(($(stat --file-system --format='%f*%S' "${STORAGE_MOUNT}"/cam_disk.bin)))
+    local reserved=$(($(stat -c "%s-(%b*%B)" "${STORAGE_MOUNT}"/cam_disk.bin)))
+    local buffer=$(((2048 * 1024 * 1024)))
+    
+    if (( freespace > (reserved + buffer) ))
     then
       break
     fi

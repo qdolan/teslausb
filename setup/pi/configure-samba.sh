@@ -27,8 +27,8 @@ then
 
   if ! grep -q samba /etc/fstab
   then
-    echo "tmpfs /var/run/samba tmpfs nodev,nosuid 0 0" >> /etc/fstab
-    echo "tmpfs /var/cache/samba tmpfs nodev,nosuid 0 0" >> /etc/fstab
+    echo "tmpfs /var/run/samba tmpfs nodev,nosuid,mode=755 0 0" >> /etc/fstab
+    echo "tmpfs /var/cache/samba tmpfs nodev,nosuid,mode=755 0 0" >> /etc/fstab
   fi
 
   mount /var/cache/samba
