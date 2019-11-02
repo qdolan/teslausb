@@ -89,6 +89,12 @@ function connect_usb_drives_to_host() {
   log "Connected usb to host."
 }
 
+function disconnect_usb_drives_from_host () {
+  log "Disconnecting usb from host..."
+  modprobe -r g_mass_storage
+  log "Disconnected usb from host."
+}
+
 function wait_for_archive_to_be_reachable () {
   log "Waiting for archive to be reachable..."
   while [ true ]
@@ -172,6 +178,10 @@ function fix_errors_in_cam_file () {
   fix_errors_in_mount_point "$CAM_MOUNT"
 }
 
+function fix_errors_in_music_file () {
+  fix_errors_in_mount_point "$MUSIC_MOUNT"
+}
+
 function ensure_cam_file_is_mounted () {
   log "Ensuring cam file is mounted..."
   ensure_mountpoint_is_mounted_with_retry "$CAM_MOUNT"
@@ -209,10 +219,6 @@ function unmount_music_file () {
   unmount_mount_point "$MUSIC_MOUNT"
 }
 
-function fix_errors_in_music_file () {
-  fix_errors_in_mount_point "$MUSIC_MOUNT"
-}
-
 function wait_for_archive_to_be_unreachable () {
   log "Waiting for archive to be unreachable..."
   while [ true ]
@@ -233,39 +239,21 @@ function wait_for_archive_to_be_unreachable () {
 }
 
 function check_if_usb_gadget_is_mounted () {
-    if ! grep -q cam_disk.bin /sys/devices/platform/soc/??980000.usb/gadget/lun?/file >/dev/null 2>&1
+    if grep -q "UNKNOWN" /sys/class/udc/20980000.usb/current_speed
     then
-        log "USB Gadget not mounted. Fixing files and remounting..."
-        disconnect_usb_drives_from_host
-        mount_and_fix_errors_in_files
-        connect_usb_drives_to_host
+        log "USB Gadget not attached. Fixing files and remounting..."
+        fix_errors_in_files
     fi
 }
 
-function mount_and_fix_errors_in_cam_file () {
+function fix_errors_in_files () {
+  disconnect_usb_drives_from_host
   fix_errors_in_cam_file
-  ensure_cam_file_is_mounted
-  unmount_cam_file
-}
-
-function mount_and_fix_errors_in_music_file () {
   if [ -e "$MUSIC_MOUNT" ]
   then
-    ensure_music_file_is_mounted
     fix_errors_in_music_file
-    unmount_music_file
   fi
-}
-
-function mount_and_fix_errors_in_files () {
-  mount_and_fix_errors_in_cam_file
-  mount_and_fix_errors_in_music_file
-}
-
-function disconnect_usb_drives_from_host () {
-  log "Disconnecting usb from host..."
-  modprobe -r g_mass_storage
-  log "Disconnected usb from host."
+  connect_usb_drives_to_host
 }
 
 function archive_teslacam_clips () {
@@ -477,6 +465,8 @@ export -f log
 echo "=============================================="
 log "Starting archiveloop..."
 
+fix_errors_in_files
+
 mount_all_snapshots
 
 if [ "${SNAPSHOTS_ENABLED:-true}" = "true" ]
@@ -490,20 +480,11 @@ then
 
   set_time
 
-  # archive_clips will fix errors in the cam file
-  mount_and_fix_errors_in_music_file
-
   archive_clips
 
   doubleblink
 
   wait_for_archive_to_be_unreachable
-else
-  slowblink
-
-  mount_and_fix_errors_in_files
-
-  connect_usb_drives_to_host
 fi
 
 while true
@@ -523,7 +504,6 @@ then
   # take a snapshot before archive_clips starts
   /root/bin/make_snapshot.sh
 fi
-
   archive_clips
 
   doubleblink
