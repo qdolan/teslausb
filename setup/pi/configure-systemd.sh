@@ -122,34 +122,28 @@ EOF
     systemctl enable fstrim.timer
 fi
 
-if systemctl is-active bluetooth | grep -q ^active
-then
-    log_progress "disabling bluetooth"
-    systemctl disable bluetooth
-    systemctl stop bluetooth
-fi
 if systemctl is-active systemd-networkd | grep -q inactive
 then
     log_progress "enabling systemd-networkd"
     systemctl enable systemd-networkd
-    systemctl restart systemd-networkd
+    #systemctl restart systemd-networkd
 fi
 if systemctl is-active systemd-resolved | grep -q inactive
 then
     log_progress "enabling systemd-resolved"
     systemctl enable systemd-resolved
-    systemctl restart systemd-resolved
+    #systemctl restart systemd-resolved
 fi
 if systemctl is-active systemd-timesyncd | grep -q inactive
 then
     log_progress "enabling systemd-timesyncd"
     systemctl enable systemd-timesyncd
-    systemctl restart systemd-timesyncd
+    #systemctl restart systemd-timesyncd
 fi
 if systemctl is-active wpa_supplicant@wlan0 | grep -q inactive
 then
     log_progress "enabling wpa_supplicant@wlan0"
     systemctl enable wpa_supplicant@wlan0
-    systemctl restart wpa_supplicant@wlan0
+    #systemctl restart wpa_supplicant@wlan0
 fi
 #systemctl enable ssh.socket

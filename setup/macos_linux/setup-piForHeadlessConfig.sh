@@ -93,6 +93,21 @@ network={
 }
 EOF
 
+BASE_DIR=$(dirname "$0")/../../
+CONF_FILE="$BASE_DIR"/teslausb_setup_variables.conf
+SETUP_FILE="$BASE_DIR"/setup/pi/setup-teslausb
+
+echo "BASE_DIR=$BASE_DIR"
+if [ -e "$CONF_FILE" ]
+then
+    cp "$CONF_FILE" "$BOOT_DIR"
+fi
+
+if [ -e "$SETUP_FILE" ]
+then
+    cp "$SETUP_FILE" "$BOOT_DIR"
+fi
+
 echo ""
 echo '-- Files updated and ready for Wifi and SSH over USB --'
 echo ""
