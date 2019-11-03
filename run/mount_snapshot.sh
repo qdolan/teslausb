@@ -33,9 +33,9 @@ cp --reflink=always $SRC $SNAP
 
 # create loopback and scan the partition table, this will create an additional loop
 # device in addition to the main loop device, e.g. /dev/loop0 and /dev/loop0p1
-losetup -P -f $SNAP
-PARTLOOP=$(losetup -j $SNAP | awk '{print $1}' | sed 's/:/p1/')
-fsck -p $PARTLOOP || true
+losetup -P -L -f "$SNAP"
+PARTLOOP=$(losetup -j "$SNAP" | awk '{print $1}' | sed 's/:/p1/')
+fsck -p "$PARTLOOP" || true
 
 mount -o ro $PARTLOOP $MNT
 

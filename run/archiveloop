@@ -64,7 +64,7 @@ function timestamp () {
 function fix_errors_in_image () {
   local image="$1"
   log "Running fsck on $image..."
-  losetup -P -f "$image"
+  losetup -P -L -f "$image"
   local loopback=$(losetup -l | grep -w  "$image" | awk '{print $1}')
   fsck -p "$loopback"p1 |& timestamp '| ' || echo ""
   losetup -d "$loopback"

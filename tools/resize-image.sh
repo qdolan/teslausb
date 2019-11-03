@@ -61,7 +61,7 @@ fi
 modprobe -r g_mass_storage
 
 # fsck the image, since we may have just yanked it out from under the host
-losetup -P -f $FILE
+losetup -P -L -f $FILE
 DEVLOOP=$(losetup -j $FILE | awk '{print $1}' | sed 's/://')
 PARTLOOP=${DEVLOOP}p1
 fsck $PARTLOOP -- -a > /dev/null || true

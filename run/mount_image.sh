@@ -17,7 +17,7 @@ fi
 # device in addition to the main loop device, e.g. /dev/loop0 and /dev/loop0p1
 if [ -z "$(losetup -j $SNAP)" ]
 then
-  losetup -P -f $SNAP
+  losetup -P -L -f $SNAP
 fi
 PARTLOOP=$(losetup -j $SNAP | awk '{print $1}' | sed 's/:/p1/')
 fsck -p $PARTLOOP || true
