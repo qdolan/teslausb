@@ -403,3 +403,4 @@ install_archive_scripts /root/bin $archive_module
 /tmp/verify-and-configure-archive.sh
 
 install_archiveloop_service /root/bin
+install_snapshot_service /root/bin
