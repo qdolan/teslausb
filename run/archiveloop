@@ -61,11 +61,30 @@ function timestamp () {
   done
 }
 
+function has_errors_in_image () {
+  local image="$1"
+  local loopback
+
+  log "Checking $image for errors..."
+  losetup -P -L -f "$image"
+  loopback=$(losetup -l | grep -w  "$image" | awk '{print $1}')
+  if ! fsck -n "$loopback"p1 >/dev/null 2>&1
+  then
+    log "Errors were found on $image."
+    return 0
+  fi
+  losetup -d "$loopback"
+  log "No errors were found on $image."
+  return 1
+}
+
 function fix_errors_in_image () {
   local image="$1"
+  local loopback
+
   log "Running fsck on $image..."
   losetup -P -L -f "$image"
-  local loopback=$(losetup -l | grep -w  "$image" | awk '{print $1}')
+  loopback=$(losetup -l | grep -w  "$image" | awk '{print $1}')
   fsck -p "$loopback"p1 |& timestamp '| ' || echo ""
   losetup -d "$loopback"
   log "Finished fsck on $image."
@@ -175,26 +194,6 @@ function ensure_mountpoint_is_mounted_with_retry () {
   retry ensure_mountpoint_is_mounted "$1"
 }
 
-function fix_errors_in_cam_file () {
-  fix_errors_in_image "$STORAGE_MOUNT"/cam_disk.bin
-}
-
-function fix_errors_in_music_file () {
-  fix_errors_in_image "$STORAGE_MOUNT"/music_disk.bin
-}
-
-function ensure_cam_file_is_mounted () {
-  log "Ensuring cam file is mounted..."
-  ensure_mountpoint_is_mounted_with_retry "$CAM_MOUNT"
-  log "Ensured cam file is mounted."
-}
-
-function ensure_music_file_is_mounted () {
-  log "Ensuring music backing file is mounted..."
-  ensure_mountpoint_is_mounted_with_retry "$MUSIC_MOUNT"
-  log "Ensured music drive is mounted."
-}
-
 function unmount_mount_point () {
   local mount_point="$1"
   log "Unmounting $mount_point..."
@@ -210,14 +209,6 @@ function unmount_mount_point () {
       log "lazy unmount failed"
     fi
   fi
-}
-
-function unmount_cam_file () {
-  unmount_mount_point "$CAM_MOUNT"
-}
-
-function unmount_music_file () {
-  unmount_mount_point "$MUSIC_MOUNT"
 }
 
 function wait_for_archive_to_be_unreachable () {
@@ -248,11 +239,17 @@ function check_if_usb_gadget_is_mounted () {
 }
 
 function fix_errors_in_files () {
-  disconnect_usb_drives_from_host
-  fix_errors_in_cam_file
-  if [ -e "$MUSIC_MOUNT" ]
+  local cam_image="$STORAGE_MOUNT"/cam_disk.bin
+  local music_image="$STORAGE_MOUNT"/music_disk.bin
+  if has_errors_in_image "$cam_image"
   then
-    fix_errors_in_music_file
+    disconnect_usb_drives_from_host
+    fix_errors_in_image "$cam_image"
+  fi
+  if [ -e "$MUSIC_MOUNT" ] && has_errors_in_image "$music_image"
+  then
+    disconnect_usb_drives_from_host
+    fix_errors_in_image "$music_image"
   fi
   connect_usb_drives_to_host
 }
