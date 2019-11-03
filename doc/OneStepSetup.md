@@ -57,6 +57,7 @@ A sample conf file is located in the `boot` folder on the SD card, but check htt
     # SSID of your 2.4 GHz network
     export SSID='your_ssid'
     export WIFIPASS='your_wifi_password'
+    export COUNTRY=US
     export HEADLESS_SETUP=true
     # export REPO=marcone
     # export BRANCH=main-dev

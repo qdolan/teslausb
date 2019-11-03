@@ -31,12 +31,13 @@ function verify_file_exists () {
 }
 
 function verify_wifi_variables () {
-  if [ ! -n "${SSID+x}" ] || [ ! -n "${WIFIPASS+x}"  ]
+  if [ ! -n "${SSID+x}" ] || [ ! -n "${WIFIPASS+x}" ] || [ ! -n "${COUNTRY+x}" ]
   then
     echo 'STOP: You need to specify your wifi name and password first. Run: '
     echo " "
     echo '      export SSID=your_ssid'
     echo '      export WIFIPASS=your_wifi_password'
+    echo '      export COUNTRY=your_country_code'
     echo " "
     echo "Be sure to replace the values with your SSID (network name) and password."
     exit 1
@@ -82,9 +83,12 @@ then
   rm "$WPA_SUPPLICANT_CONF_PATH"
 fi
 
+COUNTRY=${COUNTRY:-US}
+
 cat << EOF >> "$WPA_SUPPLICANT_CONF_PATH"
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
+country=$COUNTRY
 
 network={
   ssid="$SSID"
