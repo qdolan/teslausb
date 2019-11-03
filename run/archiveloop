@@ -61,13 +61,14 @@ function timestamp () {
   done
 }
 
-function fix_errors_in_mount_point () {
-  local mount_point="$1"
-  log "Running fsck on $mount_point..."
-  local backingfile=$(mount | grep -w "$mount_point" | awk '{print $1}')
-  local loopback=$(losetup -l | grep -w  "$backingfile" | awk '{print $1}')
-  fsck -p "$loopback" |& timestamp '| ' || echo ""
-  log "Finished fsck on $mount_point."
+function fix_errors_in_image () {
+  local image="$1"
+  log "Running fsck on $image..."
+  losetup -P -f "$image"
+  local loopback=$(losetup -l | grep -w  "$image" | awk '{print $1}')
+  fsck -p "$loopback"p1 |& timestamp '| ' || echo ""
+  losetup -d "$loopback"
+  log "Finished fsck on $image."
 }
 
 function archive_is_reachable () {
@@ -175,11 +176,11 @@ function ensure_mountpoint_is_mounted_with_retry () {
 }
 
 function fix_errors_in_cam_file () {
-  fix_errors_in_mount_point "$CAM_MOUNT"
+  fix_errors_in_image "$STORAGE_MOUNT"/cam_disk.bin
 }
 
 function fix_errors_in_music_file () {
-  fix_errors_in_mount_point "$MUSIC_MOUNT"
+  fix_errors_in_image "$STORAGE_MOUNT"/music_disk.bin
 }
 
 function ensure_cam_file_is_mounted () {
