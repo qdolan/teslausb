@@ -52,7 +52,7 @@ verify_wifi_variables
 CMDLINE_TXT_PATH="$BOOT_DIR/cmdline.txt"
 CONFIG_TXT_PATH="$BOOT_DIR/config.txt"
 
-if ! grep -q "dtoverlay=dwc2" $CONFIG_TXT_PATH
+if ! grep -q "dtoverlay=dwc2" "$CONFIG_TXT_PATH"
 then
    echo "Updating $CONFIG_TXT_PATH ..."
    echo "" >> "$CONFIG_TXT_PATH"
@@ -61,7 +61,7 @@ else
    echo "$CONFIG_TXT_PATH already contains the required dwc2 module"
 fi
 
-if ! grep -q "dwc2,g_ether" $CMDLINE_TXT_PATH
+if ! grep -q "dwc2,g_ether" "$CMDLINE_TXT_PATH"
 then
   echo "Updating $CMDLINE_TXT_PATH ..."
   sed -i'.bak' -e "s/rootwait/rootwait modules-load=dwc2,g_ether/" -e "s@ init=/usr/lib/raspi-config/init_resize.sh@@" "$CMDLINE_TXT_PATH"
