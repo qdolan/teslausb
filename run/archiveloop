@@ -61,35 +61,6 @@ function timestamp () {
   done
 }
 
-function has_errors_in_image () {
-  local image="$1"
-  local loopback
-
-  log "Checking $image for errors..."
-  losetup -P -L -f "$image"
-  loopback=$(losetup -l | grep -w  "$image" | awk '{print $1}')
-  if ! fsck -n "$loopback"p1 >/dev/null 2>&1
-  then
-    log "Errors were found on $image."
-    return 0
-  fi
-  losetup -d "$loopback"
-  log "No errors were found on $image."
-  return 1
-}
-
-function fix_errors_in_image () {
-  local image="$1"
-  local loopback
-
-  log "Running fsck on $image..."
-  losetup -P -L -f "$image"
-  loopback=$(losetup -l | grep -w  "$image" | awk '{print $1}')
-  fsck -p "$loopback"p1 |& timestamp '| ' || echo ""
-  losetup -d "$loopback"
-  log "Finished fsck on $image."
-}
-
 function archive_is_reachable () {
   local reachable=true
 
@@ -101,18 +72,6 @@ function archive_is_reachable () {
     return
   fi
   true
-}
-
-function connect_usb_drives_to_host() {
-  log "Connecting usb to host..."
-  modprobe g_mass_storage
-  log "Connected usb to host."
-}
-
-function disconnect_usb_drives_from_host () {
-  log "Disconnecting usb from host..."
-  modprobe -r g_mass_storage
-  log "Disconnected usb from host."
 }
 
 function wait_for_archive_to_be_reachable () {
@@ -230,30 +189,6 @@ function wait_for_archive_to_be_unreachable () {
   done
 }
 
-function check_if_usb_gadget_is_mounted () {
-    if grep -q "UNKNOWN" /sys/class/udc/20980000.usb/current_speed
-    then
-        log "USB Gadget not attached. Fixing files and remounting..."
-        fix_errors_in_files
-    fi
-}
-
-function fix_errors_in_files () {
-  local cam_image="$STORAGE_MOUNT"/cam_disk.bin
-  local music_image="$STORAGE_MOUNT"/music_disk.bin
-  if has_errors_in_image "$cam_image"
-  then
-    disconnect_usb_drives_from_host
-    fix_errors_in_image "$cam_image"
-  fi
-  if [ -e "$MUSIC_MOUNT" ] && has_errors_in_image "$music_image"
-  then
-    disconnect_usb_drives_from_host
-    fix_errors_in_image "$music_image"
-  fi
-  connect_usb_drives_to_host
-}
-
 function archive_teslacam_clips () {
     log "Checking saved folder count..."
   
@@ -262,7 +197,7 @@ function archive_teslacam_clips () {
   
     log "There are $DIR_COUNT event folder(s) with $FILE_COUNT file(s) to archive."
   
-    if [ $DIR_COUNT -gt 0 ]
+    if [ "$DIR_COUNT" -gt 0 ]
     then
         log "Starting recording archiving: $DIR_COUNT event folder(s) with $FILE_COUNT file(s)"
 
@@ -441,16 +376,11 @@ function mount_all_snapshots {
     fi
     /root/bin/mount_image.sh "$img" "$imgdir/mnt"
   done
+
+  # trigger snapshot to recreate symlinks
+  /root/bin/make_snapshot.sh
+
   log "mounted all snapshots"
-}
-
-
-function snapshotloop {
-  while true
-  do
-    /root/bin/trigger_snapshot.sh
-    sleep 3500
-  done
 }
 
 export ARCHIVE_HOST_NAME
@@ -463,14 +393,7 @@ export -f log
 echo "=============================================="
 log "Starting archiveloop..."
 
-fix_errors_in_files
-
 mount_all_snapshots
-
-if [ "${SNAPSHOTS_ENABLED:-true}" = "true" ]
-then
-  snapshotloop &
-fi
 
 if archive_is_reachable
 then
@@ -507,6 +430,4 @@ fi
   doubleblink
 
   wait_for_archive_to_be_unreachable
-
-  check_if_usb_gadget_is_mounted
 done

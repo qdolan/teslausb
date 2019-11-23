@@ -115,7 +115,23 @@ PathModified=/tmp/make_snapshot
 [Install]
 WantedBy=multi-user.target
 EOF
-    systemctl enable make_snapshot.path
+cat << EOF > /etc/systemd/system/make_snapshot.timer
+[Unit]
+Description=Take hourly snapshot
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=55min
+
+[Install]
+WantedBy=timers.target
+EOF
+
+    if [ "${SNAPSHOTS_ENABLED:-true}" = "true" ]
+    then
+        systemctl enable make_snapshot.path
+        systemctl enable make_snapshot.timer
+    fi
     log_progress "Installed make_snapshot service."
 }
 

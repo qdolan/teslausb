@@ -172,7 +172,7 @@ function clone_repo () {
   then
     apt-get -y --assume-yes install git
   fi
-  if [ ! -d /root/teslausb ]
+  if [ ! -e /root/teslausb ]
   then
     setup_progress "Cloning git repo: https://github.com/${REPO}/teslausb.git ..."
     git clone "https://github.com/${REPO}/teslausb.git" /root/teslausb
@@ -199,7 +199,7 @@ function get_script () {
 }
 
 function get_ancillary_setup_scripts () {
-  get_script /tmp create-backingfiles-partition.sh setup/pi
+  get_script /tmp create-partition.sh setup/pi
   get_script /tmp create-backingfiles.sh setup/pi
   get_script /tmp make-root-fs-readonly.sh setup/pi
   get_script /tmp configure.sh setup/pi
@@ -236,14 +236,14 @@ function create_usb_drive_backing_files () {
 
   if [ ! -e "$MUTABLE_MOUNTPOINT" ]
   then
-    mkdir "$MUTABLE_MOUNTPOINT"
+    ln -sf "$STORAGE_MOUNTPOINT" "$MUTABLE_MOUNTPOINT"
   fi
 
-  /tmp/create-backingfiles-partition.sh "$STORAGE_MOUNTPOINT" "$MUTABLE_MOUNTPOINT"
+  /tmp/create-partition.sh "$STORAGE_MOUNTPOINT"
 
   if ! findmnt --mountpoint $STORAGE_MOUNTPOINT
   then
-    setup_progress "Mounting the partition for the backing files..."
+    setup_progress "Mounting the partition for storage..."
     mount $STORAGE_MOUNTPOINT
     setup_progress "Mounted the partition for the backing files."
   fi
@@ -333,7 +333,8 @@ function set_timezone () {
       ln -sf "/usr/share/zoneinfo/$timezone" /etc/localtime
     elif [ "$timezone" = "auto" ]
     then
-      if curlwrapper -o /root/bin/tzupdate.py https://raw.githubusercontent.com/marcone/tzupdate/develop/tzupdate.py
+      get_script /root/bin tzupdate.py
+      if [ -e /root/bin/tzupdate.py ]
       then
         apt-get -y --assume-yes install python-requests
         chmod +x /root/bin/tzupdate.py

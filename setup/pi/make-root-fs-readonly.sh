@@ -30,12 +30,6 @@ append_cmdline_txt_param fastboot
 append_cmdline_txt_param noswap
 append_cmdline_txt_param ro
 
-if ! findmnt --mountpoint /mutable
-then
-    log_progress "Mounting the mutable partition..."
-    mount /mutable
-    log_progress "Mounted."
-fi
 if [ ! -e "/mutable/etc" ]
 then
     mkdir -p /mutable/etc
@@ -59,6 +53,7 @@ sed -i "s/spool\s*0755/spool 1777/g" /usr/lib/tmpfiles.d/var.conf >/dev/null
 # make / read-only
 # tmpfs /var/log tmpfs nodev,nosuid 0 0
 # tmpfs /var/tmp tmpfs nodev,nosuid 0 0
+# tmpfs /mnt/TeslaCam tmpfs nodev,nosuid 0 0
 # tmpfs /tmp     tmpfs nodev,nosuid 0 0
 if ! grep -P -q "/boot\s+vfat\s+.+?(?=,ro)" /etc/fstab
 then

@@ -30,8 +30,8 @@ function linksnapshotfiletorecents() {
   local file=$1
   local recents="${STORAGE_MOUNT}"/TeslaCam/RecentClips
 
-  filename=$(basename "$file")
-  filedate=$(echo "$filename" | cut -c -10)
+  filename=${file##/*/}
+  filedate=${filename:0:10}
   if [ ! -d "$recents/$filedate" ]
   then
     mkdir -p "$recents/$filedate"
@@ -52,8 +52,8 @@ function linksnapshotfiles() {
   for f
   do
     linksnapshotfiletorecents "$f"
-    # also link it into a SavedClips folder
-    local eventtime=$(basename "$(dirname "$f")")
+    local eventfolder=${f%/*}
+    local eventtime=${eventfolder##/*/}
     if [ ! -d "$path/$eventtime" ]
     then
       mkdir -p "$path/$eventtime"
@@ -76,24 +76,19 @@ function make_links_for_snapshot() {
   mkdir -p "$sentry"
   local mnt="$1"
   log "making links for $mnt"
-  if stat "$mnt"/TeslaCam/RecentClips/* > /dev/null 2>&1
-  then
-    log " - linking recent clips"
-    linkrecentfiles "$mnt"/TeslaCam/RecentClips/*
-  fi
+
+  local restore_nullglob=$(shopt -p nullglob)
+  shopt -s nullglob
+  log " - linking recent clips"
+  linkrecentfiles "$mnt"/TeslaCam/RecentClips/*
   # also link in any files that were moved to SavedClips
-  if stat "$mnt"/TeslaCam/SavedClips/*/* > /dev/null 2>&1
-  then
-    log " - linking saved clips"
-    linksnapshotfiles "$saved" "$mnt"/TeslaCam/SavedClips/*/*
-  fi
+  log " - linking saved clips"
+  linksnapshotfiles "$saved" "$mnt"/TeslaCam/SavedClips/*/*
   # and the same for SentryClips
-  if stat "$mnt"/TeslaCam/SentryClips/*/* > /dev/null 2>&1
-  then
-    log " - linking sentry clips"
-    linksnapshotfiles "$sentry" "$mnt"/TeslaCam/SentryClips/*/*
-  fi
+  log " - linking sentry clips"
+  linksnapshotfiles "$sentry" "$mnt"/TeslaCam/SentryClips/*/*
   log "made all links for $mnt"
+  $restore_nullglob
 }
 
 function check_freespace() {
@@ -154,8 +149,11 @@ function snapshot() {
     mv "$tmpsnapdir" "$newsnapdir"
     make_links_for_snapshot "$newsnapdir/mnt"
   else
-    log "new snapshot is identical to previous one, discarding"
+    log "new snapshot is identical to previous one, swap orginal image with snapshot"
     /root/bin/release_snapshot.sh "$tmpsnapmnt"
+    modprobe -r g_mass_storage
+    mv "$tmpsnapname" "${STORAGE_MOUNT}"/cam_disk.bin
+    modprobe g_mass_storage
     rm -rf "$tmpsnapdir"
   fi
 }
@@ -173,14 +171,14 @@ function relink_snapshots() {
   rm "$links_file"
 }
 
+if [ ! -e /tmp/TeslaCam ]
+then
+  mkdir -p /tmp/TeslaCam
+  ln -sf /tmp/TeslaCam "$STORAGE_MOUNT"/
+  relink_snapshots
+fi
+
 if ! snapshot
 then
   log "failed to take snapshot"
-fi
-
-# WARNING: This could take a long time with lots of snapshots
-if [ -e /tmp/relink_snapshots ]
-then
-  rm /tmp/relink_snapshots
-  relink_snapshots
 fi
