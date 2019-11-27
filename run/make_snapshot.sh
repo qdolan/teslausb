@@ -149,12 +149,16 @@ function snapshot() {
     mv "$tmpsnapdir" "$newsnapdir"
     make_links_for_snapshot "$newsnapdir/mnt"
   else
-    log "new snapshot is identical to previous one, swap orginal image with snapshot"
+    log "new snapshot is identical to previous one"
     /root/bin/release_snapshot.sh "$tmpsnapmnt"
-    modprobe -r g_mass_storage
-    mv "$tmpsnapname" "${STORAGE_MOUNT}"/cam_disk.bin
-    modprobe g_mass_storage
-    rm -rf "$tmpsnapdir"
+    if [[ ! -e /tmp/last.toc ]] || diff /tmp/last.toc "$tmpsnapname.toc" | grep -e '^>'
+    then
+      cp "$tmpsnapname.toc" /tmp/last.toc
+      modprobe -r g_mass_storage
+      mv "$tmpsnapname" "${STORAGE_MOUNT}"/cam_disk.bin
+      modprobe g_mass_storage
+      rm -rf "$tmpsnapdir"
+    fi
   fi
 }
 
